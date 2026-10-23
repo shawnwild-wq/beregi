@@ -40,7 +40,9 @@ body{background:radial-gradient(120% 80% at 50% 0%,var(--page),var(--page-2));co
 .sub b{color:var(--ink);font-weight:700}
 .bar{height:6px;border-radius:3px;background:var(--lcd-shade);overflow:hidden;flex-basis:100%}
 .bar span{display:block;height:100%;background:#f0b429}
-.snd{margin-left:auto;background:none;border:1.5px solid var(--ink-soft);border-radius:999px;font:inherit;font-size:12px;color:var(--ink-soft);padding:2px 10px;cursor:pointer}
+.snd+.snd{margin-left:6px}
+#styleBtn{white-space:nowrap;border-color:#c98a10;color:#5a3d00;background:#fff3c4}
+.snd{white-space:nowrap;flex-shrink:0;margin-left:auto;background:none;border:1.5px solid var(--ink-soft);border-radius:999px;font:inherit;font-size:12px;color:var(--ink-soft);padding:2px 10px;cursor:pointer}
 .evo{background:#fff3c4;border:2.5px solid var(--ink);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.4}
 .evo b{font-size:16px}
 .evo button{align-self:flex-start;font-family:var(--f-body);font-weight:700;background:var(--ink);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-size:14px;cursor:pointer}
@@ -115,7 +117,9 @@ body{background:radial-gradient(120% 80% at 50% 0%,var(--page),var(--page-2));co
 .style .bal{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:700}
 .coin{display:inline-flex;align-items:center;gap:5px}
 .coin i{width:14px;height:14px;border-radius:50%;background:#f2c14e;border:2px solid #c98a10;display:inline-block}
-.style .tabs{display:flex;gap:6px}
+.style .tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.style .tabs::-webkit-scrollbar{display:none}
+.style .tabs button{flex:0 0 auto}
 .style .tabs button,.style .topup{font-family:var(--f-body);font-weight:700;font-size:13px;border:2px solid var(--ink);background:transparent;color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
 .style .tabs button[aria-pressed="true"]{background:var(--ink);color:#fff}
 .style .pv{background:#f3ecdc;border-radius:12px;border:2.5px solid var(--ink)}
@@ -172,7 +176,7 @@ input#petName{font-family:var(--f-body);font-size:17px;padding:12px;border-radiu
     <div class="screen">
       <div class="top"><b id="gName"></b><span id="gStage"></span></div>
       <div class="sub" id="gSub"></div>
-      <div class="attn" id="attn"><i id="attnIcon"></i><span id="attnText"></span><button class="snd" id="sndBtn" type="button"></button></div>
+      <div class="attn" id="attn"><i id="attnIcon"></i><span id="attnText"></span><button class="snd" id="styleBtn" type="button"></button><button class="snd" id="sndBtn" type="button"></button></div>
       <div class="evo" id="evo" hidden></div>
       <div class="scenewrap"><div class="scene" id="scene"></div></div><div class="popwrap" id="popwrap" aria-hidden="true"></div>
       <div class="stat" id="statView" hidden></div>
@@ -292,10 +296,12 @@ function load(){
     const o=localStorage.getItem(OLDKEY); if(o){const v=JSON.parse(o); S.graves=v.graves||[]; S.best=v.best||0;}
   }catch(e){}
 }
-const PRICE={hair:5,outfit:10,acc:10}, START_COINS=5, WEEK_CAP=15;
+const PRICE={}, START_COINS=5, WEEK_CAP=15;
 const weekKey=t=>Math.floor((t-Date.UTC(2024,0,1))/(7*DAY));
 let coinToast='';
+Object.assign(PRICE,{hair:5,hat:5,glasses:5,neck:5,top:10,bottom:8,shoes:6,coat:8,pshoes:6});
 function earnFree(n,why){
+  if(FORECAST) return 0;
   if(S.coins==null) S.coins=0;
   const wk=weekKey(Date.now()); if(!S.freeWeek||S.freeWeek.wk!==wk) S.freeWeek={wk,n:0};
   const can=Math.max(0,Math.min(n,WEEK_CAP-S.freeWeek.n)); if(!can) return 0;
@@ -308,9 +314,10 @@ function dailyCoins(){
   S.streak=(S.lastDaily===dayKey(Date.now()-DAY))?(S.streak||0)+1:1; S.lastDaily=today;
   earnFree(S.streak%7===0?5:1, S.streak%7===0?'неделя подряд без пропусков!':'зашёл сегодня'); save();
 }
-function migrate(){ if(!S.coinsInit){ S.coins=(S.coins||0)+START_COINS; S.coinsInit=true; } const p0=S.pet; if(p0&&!CH[p0.type].human&&!p0.breed) p0.breed=BREEDS[p0.type][0].id; if(p0&&p0.messX&&p0.wv!==3){ p0.messX=p0.messX.map(x=>x+320); p0.wv=3; }
+function migrateLook(p){ if(!p||!p.look) return; const L=p.look; if(L.outfit){ L.top=L.outfit; delete L.outfit; } if(L.acc){ const m={collar:'neck',bandana:'neck',bow:'hat',partyhat:'hat',glasses:'glasses'}[L.acc]; if(m) L[m]=L.acc==='glasses'?'sun':L.acc; delete L.acc; } }
+function migrate(){ migrateLook(S.pet); if(!S.coinsInit){ S.coins=(S.coins||0)+START_COINS; S.coinsInit=true; } const p0=S.pet; if(p0&&!CH[p0.type].human&&!p0.breed) p0.breed=BREEDS[p0.type][0].id; if(p0&&p0.messX&&p0.wv!==3){ p0.messX=p0.messX.map(x=>x+320); p0.wv=3; }
   const p=S.pet; if(p&&p.poop&&!(p.messX&&p.messX.length>=p.poop)){ p.messX=[]; for(let i=0;i<p.poop;i++) p.messX.push(Math.round(rnd(24,616))); } if(p&&p.wv!==2&&p.wv!==3){ p.extra=Math.max(0,(p.extra||0)*.3); p.wv=3; } }
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} if(!FORECAST) scheduleSync();}
 
 /* ================= утилиты ================= */
 const isNight=t=>{const h=new Date(t).getHours();return h>=23||h<7;};
@@ -339,9 +346,9 @@ const EV_TEXT={hide:'спрятался',hungry:'проголодался',poop:
 function care(p){ if(!p.care) p.care={ok:0,total:0,ok1:0,total1:0}; return p.care; }
 function ratio(ok,total){ return total?ok/total:1; }
 function decideForm(p){ const c=care(p); return (p.mistakes<=4 && p.stats.disc>=40 && ratio(c.ok,c.total)>=.6 && Math.round(p.extra/CH[p.type].fatDiv)<3)?'good':'bad'; }
-const SPOTS={curtain:{x:424,name:'за шторой',left:1},table:{x:535,name:'под столом',left:1},dresser:{x:611,name:'в комоде',left:1},wardrobe:{x:156,name:'в шкафу'},bed:{x:896,name:'под кроватью'}};
-const camMin=p=>p&&p.stage==='baby'?320:0, camMax=p=>p&&p.stage==='baby'?320:WORLD-VIEW;
-function addMess(p){ if(p.poop>=4) return; p.poop++; (p.messX=p.messX||[]).push(Math.round(p.stage==='baby'?rnd(344,616):rnd(24,936))); }
+const SPOTS={curtain:{x:424,name:'за шторой',left:1},table:{x:535,name:'под столом',left:1},dresser:{x:611,name:'в комоде',left:1},wardrobe:{x:156,name:'в шкафу',left:1},bed:{x:896,name:'под кроватью'}};
+const camMin=p=>0, camMax=p=>p&&p.stage==='baby'?320:WORLD-VIEW;
+function addMess(p){ if(p.poop>=4) return; p.poop++; (p.messX=p.messX||[]).push(Math.round(p.stage==='baby'?rnd(24,616):rnd(24,936))); }
 function startEv(p,type,t){
   const s=p.stats, c=CH[p.type];
   if(type==='hungry') s.hunger=Math.min(s.hunger,20);
@@ -405,15 +412,47 @@ function step(p,t){
   if(s.health<=0) return s.hunger<=0?'истощения':'болезни';
   return null;
 }
+function seedRng(a,b){ let x=((Math.floor(a)%2147483647)^Math.imul(Math.floor(b/MIN),2654435761))>>>0; return function(){ x=(x+0x6D2B79F5)>>>0; let t=x; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; }; }
+function stepSeeded(p,t){ const R0=Math.random; Math.random=seedRng(p.born,t); try{ return step(p,t); } finally { Math.random=R0; } }
 function simulate(){
   const p=S.pet; if(!p) return;
   const now=Date.now();
   while(p.lastTick+MIN<=now){
     p.lastTick+=MIN;
-    const cause=step(p,p.lastTick);
+    const cause=stepSeeded(p,p.lastTick);
     if(cause){die(cause,p.lastTick);return;}
   }
 }
+/* ---- прогноз и напоминания в Телеграме ---- */
+const SYNC_URL='https://beregi-bot.shawnwild.workers.dev/sync';
+let FORECAST=false;
+function forecast(fromNow){
+  const p0=S.pet; if(!p0) return [];
+  const p=JSON.parse(JSON.stringify(p0)), notes=[], sx=p.sex, nm=p.name;
+  const say=t=>fem(nm+': '+t,sx);
+  const keyset=q=>{ const n=needs(q).slice(); if(q.call) n.push('зовёт тебя'); if(q.hidden) n.push('куда-то спрятался, найди его'); return n; };
+  let prev=new Set(keyset(p)), stage=p.stage;
+  const end=p.lastTick+48*HOUR; FORECAST=true;
+  try{
+    for(let t=p.lastTick+MIN;t<=end&&notes.length<25;t+=MIN){
+      p.lastTick=t; const cause=stepSeeded(p,t);
+      if(cause){ notes.push({at:t,text:fem(nm+' умер от '+cause+'. Его больше не вернуть.',sx)}); break; }
+      if(p.stage!==stage){ stage=p.stage; notes.push({at:t,text:fem(nm+' вырос! Зайди посмотреть, кем он стал.',sx)}); }
+      const cur=keyset(p), fresh=cur.filter(x=>!prev.has(x));
+      if(fresh.length&&t>=fromNow) notes.push({at:t,text:say(fresh.join(', '))});
+      prev=p.asleep?new Set([...prev,...cur]):new Set(cur);
+    }
+  } finally { FORECAST=false; }
+  return notes.filter(n=>n.at>=fromNow);
+}
+let syncTimer=null;
+function tgInit(){ try{ return (window.Telegram&&Telegram.WebApp&&Telegram.WebApp.initData)||''; }catch(e){ return ''; } }
+function syncNow(hidden){
+  const init=tgInit(); if(!init) return;
+  let notes=[]; try{ notes=forecast(Date.now()+(hidden?0:150000)); }catch(e){}
+  try{ fetch(SYNC_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:init,notes}),keepalive:true}).catch(()=>{}); }catch(e){}
+}
+function scheduleSync(){ clearTimeout(syncTimer); syncTimer=setTimeout(()=>syncNow(document.hidden),2500); }
 function die(cause,t){
   const p=S.pet, lived=t-p.born;
   const g={name:p.name,type:p.type,lived,cause,died:t,title:stageName(p),sex:p.sex};
@@ -434,25 +473,23 @@ function spoil(p){ if(p.call){p.call=null;p.stats.disc=clamp(p.stats.disc-5);if(
 function tapSpot(spot){
   simulate(); const p=S.pet; if(!p||mg) return; p.msgRaw=false;
   if(p.asleep&&!p.hidden){p.msg='Тсс, он спит.';render();return;}
-  if(spot==='wardrobe'&&!p.hidden&&p.stage!=='baby'&&knock(p)){ camX=null; save(); render(); return; }
+  if(spot==='wardrobe'&&!p.hidden&&knock(p)){ camX=null; save(); render(); return; }
   if(p.hidden===spot){ p.hidden=null; walkX=SPOTS[spot].x; p.stats.happy=clamp(p.stats.happy+25); p.msg='Нашёл! Он хихикает и выбегает.'; resolveEv(p,'hide'); if(!p.pop) p.pop=1; }
   else if(p.hidden){ p.msg='Тут его нет. Ищи дальше.'; sfx('no'); }
   else { p.msg='Тут пусто. '+(spot==='wardrobe'?'Только одежда.':spot==='bed'?'Только пыль.':'Только крошки.'); sfx('click'); }
   save(); render();
 }
-function styleTabs(p){ return CH[p.type].human?[['hair','Причёска'],['outfit','Одежда']]:[['acc','Аксессуар']]; }
+function styleTabs(p){ return CH[p.type].human?[['hair','Причёска'],['hat','Шапки'],['glasses','Очки'],['neck','Шея'],['top','Верх'],['bottom','Низ'],['shoes','Обувь']]:[['hat','Шапки'],['glasses','Очки'],['neck','Шея'],['coat','Одёжка'],['pshoes','Обувь']]; }
 function styleOpts(p,tab){
-  const L=[['default','Как было']];
-  if(tab==='hair') Object.entries(HAIRS).forEach(e=>L.push(e));
-  if(tab==='outfit') Object.entries(OUTFITS).forEach(([k,v])=>{ if(!v.fOnly||isF(p)) L.push([k,v.name]); });
-  if(tab==='acc') Object.entries(ACCS).forEach(e=>L.push(e));
+  const L=[['default','Без']]; if(tab==='hair'){ L[0][1]='Как было'; Object.entries(HAIRS).forEach(e=>L.push(e)); return L; }
+  Object.entries(WEAR[tab]||{}).forEach(([k,v])=>{ if((F_ONLY[tab]||[]).includes(k)&&!isF(p)) return; if(tab==='neck'&&k==='collar'&&CH[p.type].human) return; L.push([k,v]); });
   return L;
 }
 function renderStyle(p){
   if(!styleTab) styleTab=styleTabs(p)[0][0];
   if(styleSel==null) styleSel=(p.look||{})[styleTab]||'default';
   const look=Object.assign({},p.look||{},{[styleTab]:styleSel});
-  const vb=CH[p.type].human?'-80 -160 160 166':'-80 -125 175 130';
+  const vb=CH[p.type].human?'-85 -178 170 184':'-80 -150 175 156';
   const m=p.sick?'sick':'happy';
   $('styleView').innerHTML=`<div class="bal"><span class="coin"><i></i>${S.coins||0} ${coinWord(S.coins||0)}</span><button class="topup" id="topup" type="button">Пополнить</button></div>
     <div class="tabs">${styleTabs(p).map(([k,t])=>`<button type="button" data-tab="${k}" aria-pressed="${k===styleTab}">${t}</button>`).join('')}</div>
@@ -639,7 +676,8 @@ function face(hy,mood,o={}){
 }
 function human(type,stage,form,mood,fat,sex,look){
   const F=sex==='f'; look=look||{};
-  const OUTF=look.outfit&&look.outfit!=='default'?OUTFITS[look.outfit]:null, HAIR=look.hair&&look.hair!=='default'?look.hair:null;
+  const W=k=>look[k]&&look[k]!=='default'?look[k]:null;
+  const OUTF=W('top')?OUTFITS[look.top]:null, HAIR=look.hair&&look.hair!=='default'?look.hair:null;
   const baby=stage==='baby', adult=stage==='adult', good=adult&&form==='good', bad=adult&&form==='bad', kid=baby||type==='alpha';
   const hr=kid?34:33, hy=kid?-82:-100;
   const bw=(kid?38:46)+fat*(kid?6:9), bh=(kid?34:50)+fat*2, by=kid?-50:-70, bb=by+bh;
@@ -680,7 +718,10 @@ function human(type,stage,form,mood,fat,sex,look){
   g+=`<rect class="${fat>=2?'jig':''}" x="${-bw/2}" y="${by}" width="${bw}" height="${bh}" rx="${Math.min(bw/2-1,16+fat*3)}" fill="${pal.top}"/>`;
   g+=`</g>`;
   // детали одежды
-  if(OUTF) g+=outfitSVG(look.outfit,bw,bh,by,bb,fat);
+  if(OUTF) g+=outfitSVG(look.top,bw,bh,by,bb,fat);
+  if(W('bottom')) g+=bottomSVG(look.bottom,legX,bb,legH,skin);
+  if(W('shoes')) g+=shoesSVG(look.shoes,legX);
+  if(W('neck')) g+=neckSVG(look.neck,by+2,Math.min(bw/2-4,18));
   if(!OUTF){
   if(type==='trainer'){ g+=`<ellipse cx="0" cy="${by+1}" rx="9" ry="6" fill="${skin}" stroke="${OUT}" stroke-width="2"/>`;
     if(good) g+=`<path d="M-9 ${by+2} L0 ${by+18} L9 ${by+2}" fill="none" stroke="#3b6fd4" stroke-width="3"/><circle cx="0" cy="${by+22}" r="7" fill="#f2c14e" stroke="${OUT}" stroke-width="2"/>`; }
@@ -713,13 +754,15 @@ function human(type,stage,form,mood,fat,sex,look){
   if(type==='zoomer'&&!baby&&!HAIR) g+=`<path d="M${-hr+2} ${hy-2} q-2 18 4 26 M${hr-2} ${hy-2} q2 18 -4 26" fill="none" stroke="${pal.hair}" stroke-width="6" stroke-linecap="round"/><path d="M${-hr+4} ${hy-8} Q-6 ${hy-12} 4 ${hy-4} Q14 ${hy-12} ${hr-4} ${hy-8}" fill="${pal.hair}" stroke="${OUT}" stroke-width="2"/>`;
   if(type==='zoomer'&&good) g+=`<path d="M${-hr-4} ${hy+2} Q${-hr-4} ${hy-hr-10} 0 ${hy-hr-10} Q${hr+4} ${hy-hr-10} ${hr+4} ${hy+2}" fill="none" stroke="${OUT}" stroke-width="4"/><rect x="${-hr-9}" y="${hy-6}" width="10" height="16" rx="4" fill="#ff7aa8" stroke="${OUT}" stroke-width="2"/><rect x="${hr-1}" y="${hy-6}" width="10" height="16" rx="4" fill="#ff7aa8" stroke="${OUT}" stroke-width="2"/>`;
   if(type==='alpha') g+=`<path d="M2 ${hy-hr} q4 -12 12 -10" fill="none" stroke="${OUT}" stroke-width="2.5"/><path d="M2 ${hy-hr} q4 -12 12 -10" fill="none" stroke="${pal.hair}" stroke-width="1"/>`;
-  if(type==='trainer'&&!bad) g+=`<rect x="${-hr-1}" y="${hy-14}" width="${2*hr+2}" height="8" rx="3" fill="#e8584f" stroke="${OUT}" stroke-width="2.5"/>`;
-  if(type==='student'&&good) g+=`<g stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"><rect x="-20" y="${hy-hr+2}" width="40" height="10" fill="#2a2a2a"/><polygon points="-40,${hy-hr-2} 0,${hy-hr-14} 40,${hy-hr-2} 0,${hy-hr+8}" fill="#2a2a2a"/></g><path d="M30 ${hy-hr-4} v18" stroke="#f2c14e" stroke-width="3"/>`;
+  if(type==='trainer'&&!bad&&!W('hat')) g+=`<rect x="${-hr-1}" y="${hy-14}" width="${2*hr+2}" height="8" rx="3" fill="#e8584f" stroke="${OUT}" stroke-width="2.5"/>`;
+  if(type==='student'&&good&&!W('hat')) g+=`<g stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"><rect x="-20" y="${hy-hr+2}" width="40" height="10" fill="#2a2a2a"/><polygon points="-40,${hy-hr-2} 0,${hy-hr-14} 40,${hy-hr-2} 0,${hy-hr+8}" fill="#2a2a2a"/></g><path d="M30 ${hy-hr-4} v18" stroke="#f2c14e" stroke-width="3"/>`;
   if(stage==='teen'&&form==='bad'&&!HAIR) g+=`<path d="M-8 ${hy-hr+1} l-4 -12 l9 7 l3 -12 l4 12 l8 -9 l-2 13" fill="${pal.hair}" stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"/><path d="M-18 ${hy-6} l10 4 M18 ${hy-6} l-10 4" stroke="${OUT}" stroke-width="2.5" stroke-linecap="round"/>`;
   g+=face(hy,mood,{fat,lash:F});
   if((type==='zoomer'||type==='alpha')&&bad) g+=`<path d="M-16 ${hy+9} q5 3 10 0 M6 ${hy+9} q5 3 10 0" fill="none" stroke="#8a6a9a" stroke-width="2"/>`;
   if(type==='alpha'&&good) g+=`<g fill="none" stroke="${OUT}" stroke-width="2"><circle cx="-11" cy="${hy+3}" r="8"/><circle cx="11" cy="${hy+3}" r="8"/><path d="M-3 ${hy+3} h6"/></g>`;
   if(type==='office'&&!baby) g+=`<g fill="none" stroke="${OUT}" stroke-width="2"><circle cx="-11" cy="${hy+3}" r="8"/><circle cx="11" cy="${hy+3}" r="8"/><path d="M-3 ${hy+3} h6"/></g>`;
+  if(W('glasses')) g+=glassesSVG(look.glasses,hy+3);
+  if(W('hat')) g+=hatSVG(look.hat,hr,hy);
   if(type==='student'&&bad&&!F) g+=`<g fill="${OUT}"><circle cx="-6" cy="${hy+24}" r="1.2"/><circle cx="0" cy="${hy+26}" r="1.2"/><circle cx="6" cy="${hy+24}" r="1.2"/><circle cx="-10" cy="${hy+21}" r="1.2"/><circle cx="10" cy="${hy+21}" r="1.2"/></g><path d="M-16 ${hy+9} q5 3 10 0 M6 ${hy+9} q5 3 10 0" fill="none" stroke="#8a6a9a" stroke-width="2"/>`;
   return g;
 }
@@ -777,8 +820,107 @@ function accSVG(a,hr,hy){
   if(a==='glasses') return `<g ${st}><rect x="-20" y="${hy-2}" width="16" height="10" rx="4" fill="#2a2a2a"/><rect x="4" y="${hy-2}" width="16" height="10" rx="4" fill="#2a2a2a"/><path d="M-4 ${hy+2} h8" fill="none"/></g>`;
   return '';
 }
+const WEAR={
+  hat:{cap:'Кепка',beanie:'Шапка-бини',cowboy:'Ковбойская шляпа',tophat:'Цилиндр',panama:'Панама',crown:'Корона',partyhat:'Колпачок',bow:'Бантик'},
+  glasses:{sun:'Солнечные очки',round:'Круглые золотые',heart:'Очки-сердечки',nerd:'Большие чёрные'},
+  neck:{goldchain:'Золотая цепь',pearls:'Жемчуг',scarf:'Шарф',bowtie:'Бабочка',bandana:'Бандана',collar:'Ошейник'},
+  top:{leather:'Кожаная куртка',denim:'Джинсовка',suit:'Пиджак',sweater:'Свитер',plaid:'Рубашка в клетку',tshirt:'Футболка',hoodie:'Худи',sport:'Олимпийка',tux:'Смокинг',hawaii:'Гавайская рубашка',pajama:'Пижама',dress:'Платье'},
+  bottom:{jeans:'Джинсы',black:'Чёрные брюки',shorts:'Шорты',joggers:'Спортивки',camo:'Камуфляж',skirt:'Юбка'},
+  shoes:{sneakers:'Белые кроссовки',keds:'Красные кеды',boots:'Чёрные ботинки',heels:'Туфли',uggs:'Угги',slippers:'Тапочки'},
+  coat:{sweater:'Свитер',raincoat:'Дождевик',hoodie:'Худи',leather:'Кожанка',tshirt:'Футболка'},
+  pshoes:{red:'Красные ботиночки',yellow:'Жёлтые резиновые',black:'Чёрные ботинки',white:'Белые кроссовки'}
+};
+const WEAR_PRICE={hair:5,hat:5,glasses:5,neck:5,top:10,bottom:8,shoes:6,coat:8,pshoes:6};
+const HUMAN_ONLY_NECK=['collar'], PET_ONLY_NECK=[], F_ONLY={top:['dress'],bottom:['skirt'],shoes:['heels']};
+Object.assign(OUTFITS,{leather:{name:'Кожаная куртка',top:'#2a2a2e'},denim:{name:'Джинсовка',top:'#5b7fb5'},suit:{name:'Пиджак',top:'#5d6470'},
+  sweater:{name:'Свитер',top:'#c0453b'},plaid:{name:'Рубашка в клетку',top:'#d35a4f'},tshirt:{name:'Футболка',top:'#f7f7f2'}});
+OUTFITS.sport.name='Олимпийка';
+const _outfitSVG=outfitSVG;
+outfitSVG=function(o,bw,bh,by,bb,fat){
+  const st=`stroke="${OUT}" stroke-width="2" stroke-linecap="round"`;
+  if(o==='leather') return `<rect x="-7" y="${by+2}" width="14" height="${bh-6}" fill="#f7f7f2" stroke="none"/><path d="M-7 ${by+2} v${bh-6} M7 ${by+2} v${bh-6}" fill="none" ${st}/><path d="M-7 ${by+1} l-9 14 l7 0 z M7 ${by+1} l9 14 l-7 0 z" fill="#3a3a40" ${st}/><path d="M${-bw/2+6} ${by+bh*.62} h8 M${bw/2-14} ${by+bh*.62} h8" stroke="#bbb" stroke-width="2"/>`;
+  if(o==='denim') return `<path d="M0 ${by+2} v${bh-4}" stroke="#f2c14e" stroke-width="1.5" stroke-dasharray="3 3"/><rect x="${-bw/2+6}" y="${by+10}" width="10" height="8" fill="none" stroke="#f2c14e" stroke-width="1.5" stroke-dasharray="3 2"/><rect x="${bw/2-16}" y="${by+10}" width="10" height="8" fill="none" stroke="#f2c14e" stroke-width="1.5" stroke-dasharray="3 2"/><path d="M-8 ${by} l8 10 l8 -10" fill="#7f9ccc" ${st}/>`;
+  if(o==='suit') return `<path d="M-10 ${by} L0 ${by+22} L10 ${by} Z" fill="#fff" ${st}/><path d="M0 ${by+4} l-3 5 l3 ${Math.max(14,bh*.45)} l3 -${Math.max(14,bh*.45)} z" fill="#e8584f" ${st}/><circle cx="${-4}" cy="${by+bh*.7}" r="1.8" fill="${OUT}"/>`;
+  if(o==='sweater') return `<path d="M${-bw/2+2} ${by+bh*.35} ${Array.from({length:6},()=>`l${(bw-4)/12} -5 l${(bw-4)/12} 5`).join(' ')}" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M${-bw/2+3} ${by+bh-6} h${bw-6}" stroke="#8f2f28" stroke-width="3"/>`;
+  if(o==='plaid'){ let s=''; for(let i=1;i<4;i++) s+=`<path d="M${-bw/2+bw*i/4} ${by+2} v${bh-4}" stroke="#7a2a24" stroke-width="2.5"/><path d="M${-bw/2+2} ${by+bh*i/4} h${bw-4}" stroke="#7a2a24" stroke-width="2.5"/>`; return s+`<path d="M0 ${by+2} v${bh-4}" fill="none" ${st}/>`; }
+  if(o==='tshirt') return `<path d="M-7 ${by+12} l7 -6 l7 6 l-7 9 z" fill="#e8584f" ${st}/><circle cx="0" cy="${by+bh*.62}" r="3" fill="#f2c14e"/>`;
+  return _outfitSVG(o,bw,bh,by,bb,fat);
+};
+function bottomSVG(id,legX,bb,legH,skin){
+  const st=`stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"`, y=bb-8;
+  const col={jeans:'#3f5f8f',black:'#2a2a2e',shorts:'#c9a66b',joggers:'#8a8f98',camo:'#6b7a4a',skirt:'#2a2a2e'}[id];
+  if(id==='skirt') return `<path d="M${-legX-9} ${y} h${2*legX+18} l7 ${Math.min(22,legH)} h${-2*legX-32} z" fill="${col}" ${st}/>`;
+  let s=''; [-1,1].forEach(sx=>{ const x=sx*legX-5;
+    if(id==='shorts'){ s+=`<rect x="${x}" y="${y}" width="10" height="${legH}" rx="4" fill="${skin}" ${st}/><rect x="${x-1}" y="${y}" width="12" height="${Math.min(12,legH)}" rx="3" fill="${col}" ${st}/>`; }
+    else { s+=`<rect x="${x}" y="${y}" width="10" height="${legH}" rx="4" fill="${col}" ${st}/>`;
+      if(id==='jeans') s+=`<path d="M${x+5} ${y+2} v${legH-4}" stroke="#f2c14e" stroke-width="1.2" stroke-dasharray="2 2"/>`;
+      if(id==='joggers') s+=`<path d="M${x+(sx<0?2:8)} ${y+2} v${legH-4}" stroke="#fff" stroke-width="2"/>`;
+      if(id==='camo') s+=`<circle cx="${x+3}" cy="${y+legH*.35}" r="2.5" fill="#3f4a2a"/><circle cx="${x+7}" cy="${y+legH*.7}" r="2.5" fill="#a8a070"/>`; }
+  });
+  return s;
+}
+function shoesSVG(id,legX){
+  const st=`stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"`; let s='';
+  [-1,1].forEach(sx=>{ const cx=sx*(legX+1);
+    if(id==='sneakers') s+=`<ellipse cx="${cx}" cy="-3" rx="10" ry="5.5" fill="#fff" ${st}/><path d="M${cx-8} -1 h16" stroke="#5bb6e8" stroke-width="2"/>`;
+    if(id==='keds') s+=`<ellipse cx="${cx}" cy="-3" rx="10" ry="5" fill="#e8584f" ${st}/><path d="M${cx-9} 0 h18" stroke="#fff" stroke-width="2.5"/>`;
+    if(id==='boots') s+=`<rect x="${cx-7}" y="-15" width="14" height="12" rx="2" fill="#2a2a2e" ${st}/><ellipse cx="${cx+1}" cy="-3" rx="10" ry="5" fill="#2a2a2e" ${st}/>`;
+    if(id==='heels') s+=`<ellipse cx="${cx}" cy="-4" rx="8" ry="4" fill="#d6304a" ${st}/><path d="M${cx+sx*5} -2 v4" stroke="${OUT}" stroke-width="3"/>`;
+    if(id==='uggs') s+=`<rect x="${cx-8}" y="-16" width="16" height="14" rx="5" fill="#d9b48a" ${st}/><ellipse cx="${cx}" cy="-3" rx="10" ry="5" fill="#d9b48a" ${st}/><path d="M${cx-8} -14 h16" stroke="#fff" stroke-width="3"/>`;
+    if(id==='slippers') s+=`<ellipse cx="${cx}" cy="-3" rx="11" ry="5" fill="#f29ac8" ${st}/><circle cx="${cx+sx*5}" cy="-6" r="3.5" fill="#fff" ${st}/>`;
+  });
+  return s;
+}
+function hatSVG(id,hr,hy){
+  const st=`stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"`, t=hy-hr;
+  const dome=(c,h)=>`<path d="M${-hr-1} ${hy-6} Q${-hr-1} ${t-h} 0 ${t-h} Q${hr+1} ${t-h} ${hr+1} ${hy-6} Z" fill="${c}" ${st}/>`;
+  if(id==='cap') return dome('#e8584f',4)+`<path d="M${hr-6} ${hy-8} q18 -2 24 4 q-12 4 -24 2 z" fill="#c43c35" ${st}/>`;
+  if(id==='beanie') return dome('#4f8fd0',12)+`<rect x="${-hr-2}" y="${hy-12}" width="${2*hr+4}" height="9" rx="4" fill="#3b6fb0" ${st}/><circle cx="0" cy="${t-14}" r="7" fill="#fff" ${st}/>`;
+  if(id==='cowboy') return `<rect x="-18" y="${t-16}" width="36" height="22" rx="8" fill="#9a6a3a" ${st}/><ellipse cx="0" cy="${t+6}" rx="${hr+16}" ry="6" fill="#b07a44" ${st}/><path d="M-17 ${t+1} h34" stroke="#5a3a1a" stroke-width="3"/>`;
+  if(id==='tophat') return `<rect x="-17" y="${t-30}" width="34" height="34" rx="2" fill="#2a2a2e" ${st}/><ellipse cx="0" cy="${t+4}" rx="${hr+6}" ry="5" fill="#2a2a2e" ${st}/><rect x="-17" y="${t-6}" width="34" height="6" fill="#d6304a" stroke="none"/>`;
+  if(id==='panama') return dome('#f2e6c8',6)+`<ellipse cx="0" cy="${hy-8}" rx="${hr+12}" ry="5" fill="#f2e6c8" ${st}/><path d="M${-hr} ${hy-13} h${2*hr}" stroke="#2a2a2e" stroke-width="3"/>`;
+  if(id==='crown') return `<polygon points="-16,${t+4} -16,${t-12} -8,${t-4} 0,${t-16} 8,${t-4} 16,${t-12} 16,${t+4}" fill="#f2c14e" ${st}/><circle cx="0" cy="${t-2}" r="2.5" fill="#d6304a"/>`;
+  if(id==='partyhat') return `<path d="M-12 ${t+4} L4 ${t-30} L16 ${t+2} Z" fill="#a993dd" ${st}/><circle cx="4" cy="${t-32}" r="4" fill="#f2c14e" ${st}/><path d="M-4 ${t-6} l12 -2 M0 ${t-16} l8 -1" stroke="#fff" stroke-width="2"/>`;
+  if(id==='bow') return `<g transform="translate(${-hr+8} ${t+4}) rotate(-20)"><path d="M0 0 l-10 -7 v14 z M0 0 l10 -7 v14 z" fill="#ff7aa8" ${st}/><circle r="3.5" fill="#ff7aa8" ${st}/></g>`;
+  return '';
+}
+function glassesSVG(id,ey){
+  const st=`stroke="${OUT}" stroke-width="2"`;
+  if(id==='sun') return `<g ${st}><rect x="-21" y="${ey-5}" width="17" height="11" rx="4" fill="#1e1e24"/><rect x="4" y="${ey-5}" width="17" height="11" rx="4" fill="#1e1e24"/><path d="M-4 ${ey-1} h8" fill="none"/></g><path d="M-17 ${ey-2} l5 0 M8 ${ey-2} l5 0" stroke="#fff" stroke-width="1.5" opacity=".6"/>`;
+  if(id==='round') return `<g fill="rgba(255,255,255,.25)" stroke="#c99a1e" stroke-width="2.5"><circle cx="-11" cy="${ey}" r="8"/><circle cx="11" cy="${ey}" r="8"/><path d="M-3 ${ey} h6" fill="none"/></g>`;
+  if(id==='heart'){ const h=x=>`<path d="M${x} ${ey+7} l-8 -8 a4.5 4.5 0 0 1 8 -5 a4.5 4.5 0 0 1 8 5 z" fill="#ff5c9a" ${st}/>`; return h(-11)+h(11)+`<path d="M-3 ${ey-2} h6" ${st}/>`; }
+  if(id==='nerd') return `<g fill="none" stroke="${OUT}" stroke-width="4"><rect x="-21" y="${ey-7}" width="17" height="14" rx="2"/><rect x="4" y="${ey-7}" width="17" height="14" rx="2"/><path d="M-4 ${ey-2} h8"/></g>`;
+  return '';
+}
+function neckSVG(id,y,w){
+  const st=`stroke="${OUT}" stroke-width="2" stroke-linejoin="round"`;
+  if(id==='goldchain') return `<path d="M${-w} ${y} q${w} ${w*.7} ${2*w} 0" fill="none" stroke="#f2c14e" stroke-width="3.5" stroke-dasharray="3 1.5"/><circle cx="0" cy="${y+w*.38}" r="5" fill="#f2c14e" ${st}/>`;
+  if(id==='pearls'){ let s=''; for(let i=0;i<=8;i++){ const k=i/8, x=-w+2*w*k, yy=y+w*.7*2*k*(1-k)*0.5*2; s+=`<circle cx="${x}" cy="${yy}" r="3" fill="#fbf6ea" ${st}/>`; } return s; }
+  if(id==='scarf') return `<path d="M${-w} ${y-2} q${w} ${w*.5} ${2*w} 0 v8 q${-w} ${w*.5} ${-2*w} 0 z" fill="#d6304a" ${st}/><rect x="${w*.3}" y="${y+4}" width="9" height="22" rx="2" fill="#d6304a" ${st}/><path d="M${w*.3} ${y+22} h9" stroke="#fff" stroke-width="2"/>`;
+  if(id==='bowtie') return `<path d="M0 ${y+4} l-10 -6 v12 z M0 ${y+4} l10 -6 v12 z" fill="#1e1e24" ${st}/><circle cx="0" cy="${y+4}" r="2.5" fill="#1e1e24"/>`;
+  if(id==='bandana') return `<path d="M${-w} ${y-2} h${2*w} l${-w} ${w*.9} z" fill="#e8584f" ${st}/><circle cx="-6" cy="${y+3}" r="1.6" fill="#fff"/><circle cx="6" cy="${y+3}" r="1.6" fill="#fff"/><circle cx="0" cy="${y+9}" r="1.6" fill="#fff"/>`;
+  if(id==='collar') return `<path d="M${-w} ${y} q${w} ${w*.55} ${2*w} 0" fill="none" stroke="#e8584f" stroke-width="5" stroke-linecap="round"/><circle cx="0" cy="${y+w*.3+4}" r="4.5" fill="#f2c14e" ${st}/>`;
+  return '';
+}
+function petCoatSVG(id,bcx,bcy,brx,bry){
+  const st=`stroke="${OUT}" stroke-width="2.5"`;
+  const col={sweater:'#c0453b',raincoat:'#f2c94c',hoodie:'#7e8fa6',leather:'#2a2a2e',tshirt:'#f7f7f2'}[id];
+  let s=`<path d="M${bcx-brx*.7} ${bcy+bry*.55} Q${bcx-brx*.95} ${bcy-bry*1.05} ${bcx} ${bcy-bry*1.02} Q${bcx+brx*.95} ${bcy-bry*1.05} ${bcx+brx*.7} ${bcy+bry*.55} Z" fill="${col}" ${st}/>`;
+  if(id==='sweater') s+=`<path d="M${bcx-brx*.75} ${bcy-bry*.15} ${Array.from({length:6},()=>`l${brx*.125} -4 l${brx*.125} 4`).join(' ')}" fill="none" stroke="#fff" stroke-width="2.5"/>`;
+  if(id==='raincoat') s+=`<circle cx="${bcx-brx*.2}" cy="${bcy-bry*.3}" r="2.5" fill="${OUT}"/><circle cx="${bcx+brx*.15}" cy="${bcy-bry*.2}" r="2.5" fill="${OUT}"/>`;
+  if(id==='hoodie') s+=`<path d="M${bcx-brx*.3} ${bcy+bry*.1} h${brx*.6}" stroke="${OUT}" stroke-width="2"/><path d="M${bcx+brx*.6} ${bcy-bry*.8} q${-brx*.35} ${-bry*.4} ${-brx*.7} 0" fill="#6a7b92" ${st}/>`;
+  if(id==='leather') s+=`<path d="M${bcx} ${bcy-bry} v${bry*1.4}" stroke="#bbb" stroke-width="2"/>`;
+  if(id==='tshirt') s+=`<circle cx="${bcx}" cy="${bcy-bry*.2}" r="5" fill="#e8584f"/>`;
+  return s;
+}
+function petShoesSVG(id,xs,y){
+  const st=`stroke="${OUT}" stroke-width="2.5"`, col={red:'#e8584f',yellow:'#f2c94c',black:'#2a2a2e',white:'#fff'}[id];
+  return xs.map(x=>`<ellipse cx="${x}" cy="${y}" rx="9" ry="6" fill="${col}" ${st}/><path d="M${x-7} ${y+3} h14" stroke="${id==='white'?'#5bb6e8':'#fff'}" stroke-width="2"/>`).join('');
+}
+function humanWear(look,g){ return g; }
+
 function cat(stage,form,mood,fat,opt={}){
-  const B=opt.breed||BREEDS.cat[0];
+  const B=opt.breed||BREEDS.cat[0], CC=!!(opt.look&&opt.look.coat&&opt.look.coat!=='default');
   const baby=stage==='baby', good=stage==='adult'&&form==='good', bad=stage==='adult'&&form==='bad';
   const sick=mood==='sick', fur=sick?'#c9cf9a':B.fur, dark=B.dark, f2=fat+(B.round||0), big=B.big?1.12:1;
   const hr=(baby?30:28)*(B.big&&!baby?1.06:1), hy=baby?-50:-64;
@@ -789,17 +931,18 @@ function cat(stage,form,mood,fat,opt={}){
   g+=`<g stroke="${OUT}" stroke-width="2.5">`;
   [bcx-brx+12,bcx-brx+26,bcx+brx-26,bcx+brx-12].forEach(x=>g+=`<ellipse cx="${x}" cy="-4" rx="8" ry="5" fill="${B.pat==='points'?dark:fur}"/>`);
   g+=`<ellipse class="${fat>=2?'jig':''}" cx="${bcx}" cy="${bcy}" rx="${brx}" ry="${bry}" fill="${fur}"/>`;
+  if(opt.look&&opt.look.coat&&opt.look.coat!=='default') g+=`</g>`+petCoatSVG(opt.look.coat,bcx,bcy,brx,bry)+`<g stroke="${OUT}" stroke-width="2.5">`;
   const earC=B.pat==='points'?dark:fur;
   g+=`<polygon points="${-hr+2},${hy-6} ${-hr+6},${hy-hr-12} -6,${hy-hr+3}" fill="${earC}"/><polygon points="${hr-2},${hy-6} ${hr-6},${hy-hr-12} 6,${hy-hr+3}" fill="${earC}"/>`;
   g+=`<circle cx="0" cy="${hy}" r="${hr}" fill="${fur}"/></g>`;
   if(B.tufts) g+=`<path d="M${-hr+6} ${hy-hr-12} l-3 -8 M${hr-6} ${hy-hr-12} l3 -8" stroke="${OUT}" stroke-width="2.5" stroke-linecap="round"/>`;
   g+=`<polygon points="${-hr+7},${hy-10} ${-hr+8},${hy-hr-4} -9,${hy-hr+5}" fill="${PINK}"/><polygon points="${hr-7},${hy-10} ${hr-8},${hy-hr-4} 9,${hy-hr+5}" fill="${PINK}"/>`;
   if(B.pat==='tabby') g+=`<path d="M-6 ${hy-hr+4} v8 M0 ${hy-hr+3} v10 M6 ${hy-hr+4} v8" stroke="${dark}" stroke-width="3" stroke-linecap="round"/>`;
-  if(B.stripes) g+=`<path d="M${bcx-brx*.4} ${bcy-bry+3} q4 ${bry*.5} 0 ${bry*.8} M${bcx} ${bcy-bry+1} q4 ${bry*.5} 0 ${bry*.8} M${bcx+brx*.4} ${bcy-bry+3} q4 ${bry*.5} 0 ${bry*.8}" fill="none" stroke="${dark}" stroke-width="4" stroke-linecap="round"/>`;
-  if(B.pat==='calico') g+=`<ellipse cx="${bcx-brx*.35}" cy="${bcy-bry*.3}" rx="${brx*.32}" ry="${bry*.45}" fill="#f2a65a"/><ellipse cx="${bcx+brx*.4}" cy="${bcy-bry*.15}" rx="${brx*.25}" ry="${bry*.4}" fill="#3a3a42"/><path d="M${-hr+4} ${hy-8} q8 -16 22 -18 q-4 14 -22 18 z" fill="#f2a65a"/><path d="M${hr-4} ${hy-8} q-6 -14 -16 -16 q2 12 16 16 z" fill="#3a3a42"/>`;
+  if(B.stripes&&!CC) g+=`<path d="M${bcx-brx*.4} ${bcy-bry+3} q4 ${bry*.5} 0 ${bry*.8} M${bcx} ${bcy-bry+1} q4 ${bry*.5} 0 ${bry*.8} M${bcx+brx*.4} ${bcy-bry+3} q4 ${bry*.5} 0 ${bry*.8}" fill="none" stroke="${dark}" stroke-width="4" stroke-linecap="round"/>`;
+  if(B.pat==='calico'&&!CC) g+=`<ellipse cx="${bcx-brx*.35}" cy="${bcy-bry*.3}" rx="${brx*.32}" ry="${bry*.45}" fill="#f2a65a"/><ellipse cx="${bcx+brx*.4}" cy="${bcy-bry*.15}" rx="${brx*.25}" ry="${bry*.4}" fill="#3a3a42"/><path d="M${-hr+4} ${hy-8} q8 -16 22 -18 q-4 14 -22 18 z" fill="#f2a65a"/><path d="M${hr-4} ${hy-8} q-6 -14 -16 -16 q2 12 16 16 z" fill="#3a3a42"/>`;
   if(B.pat==='points') g+=`<ellipse cx="0" cy="${hy+10}" rx="${hr*.55}" ry="${hr*.45}" fill="${dark}" opacity=".85"/>`;
   if(B.pat==='hairless') g+=`<path d="M-10 ${hy-hr+8} q10 -4 20 0 M-12 ${hy-hr+13} q12 -4 24 0" fill="none" stroke="${dark}" stroke-width="2" stroke-linecap="round"/>`;
-  if(B.pat!=='hairless') g+=`<ellipse cx="${bcx}" cy="${bcy+bry*.35}" rx="${brx*.55}" ry="${bry*.45}" fill="${B.belly||'#fbe3c8'}"/>`;
+  if(B.pat!=='hairless'&&!CC) g+=`<ellipse cx="${bcx}" cy="${bcy+bry*.35}" rx="${brx*.55}" ry="${bry*.45}" fill="${B.belly||'#fbe3c8'}"/>`;
   if(B.pat==='calico') g+=`<circle cx="0" cy="${hy}" r="${hr-1.5}" fill="none" stroke="${OUT}" stroke-width="2.5"/>`;
   g+=`<path d="M-3 ${hy+11} h6 l-3 3.5 z" fill="${PINK}" stroke="${OUT}" stroke-width="1.5" stroke-linejoin="round"/>`;
   const wk=B.ink||OUT;
@@ -807,8 +950,12 @@ function cat(stage,form,mood,fat,opt={}){
   if(stage==='teen'&&form==='bad') g+=`<path d="M-18 ${hy-6} l10 4 M18 ${hy-6} l-10 4" stroke="${wk}" stroke-width="2.5" stroke-linecap="round"/>`;
   g+=face(hy,mood,{cat:true,fat,lazy:bad&&mood==='normal',lash:opt.fem,ink:B.ink,eyeBg:B.eyeBg});
   if(opt.fem) g+=`<g transform="translate(${hr-6} ${hy-hr+2}) rotate(20)"><path d="M0 0 l-9 -6 v12 z M0 0 l9 -6 v12 z" fill="#ff7aa8" stroke="${OUT}" stroke-width="2" stroke-linejoin="round"/><circle r="3" fill="#ff7aa8" stroke="${OUT}" stroke-width="2"/></g>`;
-  if(good&&!(opt.look&&opt.look.acc==='partyhat')) g+=`<polygon points="-16,${hy-hr+2} -16,${hy-hr-14} -8,${hy-hr-6} 0,${hy-hr-18} 8,${hy-hr-6} 16,${hy-hr-14} 16,${hy-hr+2}" fill="#f2c14e" stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"/>`;
-  if(opt.look&&opt.look.acc) g+=accSVG(opt.look.acc,hr,hy);
+  const LK=opt.look||{}, PW=k=>LK[k]&&LK[k]!=='default'?LK[k]:null;
+  if(good&&!PW('hat')) g+=`<polygon points="-16,${hy-hr+2} -16,${hy-hr-14} -8,${hy-hr-6} 0,${hy-hr-18} 8,${hy-hr-6} 16,${hy-hr-14} 16,${hy-hr+2}" fill="#f2c14e" stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"/>`;
+  if(PW('pshoes')) g+=petShoesSVG(LK.pshoes,[bcx-brx+12,bcx-brx+26,bcx+brx-26,bcx+brx-12],-4);
+  if(PW('neck')) g+=neckSVG(LK.neck,hy+hr-5,17);
+  if(PW('glasses')) g+=glassesSVG(LK.glasses,hy+3);
+  if(PW('hat')) g+=hatSVG(LK.hat,hr,hy);
   return g;
 }
 function dog(stage,form,mood,fat,opt={}){
@@ -827,10 +974,12 @@ function dog(stage,form,mood,fat,opt={}){
   else g+=`<g class="wag" style="transform-origin:${tx}px ${bcy-bry*.4}px"><path d="M${tx} ${bcy-bry*.4} q20 -6 22 -30" fill="none" stroke="${OUT}" stroke-width="10" stroke-linecap="round"/><path d="M${tx} ${bcy-bry*.4} q20 -6 22 -30" fill="none" stroke="${fur}" stroke-width="5.5" stroke-linecap="round"/></g>`;
   [bcx-brx+10,bcx-brx+24,bcx+brx-24,bcx+brx-10].forEach(x=>g+=`<rect x="${x-5}" y="${-legH-6}" width="10" height="${legH+4}" rx="4" fill="${fur}" ${st}/><ellipse cx="${x}" cy="-3" rx="7" ry="4" fill="${B.white?'#fff':fur}" ${st}/>`);
   g+=`<ellipse class="${fat>=2?'jig':''}" cx="${bcx}" cy="${bcy}" rx="${brx}" ry="${bry}" fill="${fur}" ${st}/>`;
+  const DCOAT=opt.look&&opt.look.coat&&opt.look.coat!=='default';
   if(B.fluffy) g+=`<path d="M${bcx-brx} ${bcy} ${Array.from({length:9},(_,i)=>`q${brx/9} -9 ${brx*2/9} 0`).join(' ')}" fill="none" stroke="${OUT}" stroke-width="2"/>`;
   if(B.saddle) g+=`<path d="M${bcx-brx*.6} ${bcy-bry*.55} q${brx*.6} -${bry*.7} ${brx*1.2} 0 q-${brx*.6} ${bry*.4} -${brx*1.2} 0 z" fill="${B.saddle}"/>`;
   if(B.spots) [[-.5,-.3],[0,-.5],[.45,-.2],[-.15,.1],[.3,.25]].forEach(([a,b])=>g+=`<circle cx="${bcx+brx*a}" cy="${bcy+bry*b}" r="4" fill="${B.spots}"/>`);
-  if(B.white) g+=`<ellipse cx="${bcx}" cy="${bcy+bry*.4}" rx="${brx*.5}" ry="${bry*.4}" fill="#fff"/>`;
+  if(DCOAT) g+=petCoatSVG(opt.look.coat,bcx,bcy,brx,bry);
+  if(B.white&&!DCOAT) g+=`<ellipse cx="${bcx}" cy="${bcy+bry*.4}" rx="${brx*.5}" ry="${bry*.4}" fill="#fff"/>`;
   // уши
   const ear=B.ears;
   if(ear==='up') g+=`<polygon points="${-hr+2},${hy-4} ${-hr+4},${hy-hr-16} -4,${hy-hr+2}" fill="${headC}" ${st}/><polygon points="${hr-2},${hy-4} ${hr-4},${hy-hr-16} 4,${hy-hr+2}" fill="${headC}" ${st}/>`;
@@ -848,8 +997,12 @@ function dog(stage,form,mood,fat,opt={}){
   if(stage==='teen'&&form==='bad') g+=`<path d="M-18 ${hy-6} l10 4 M18 ${hy-6} l-10 4" stroke="${OUT}" stroke-width="2.5" stroke-linecap="round"/>`;
   g+=face(hy-2,mood,{cat:true,dog:true,fat,lazy:bad&&mood==='normal',lash:opt.fem,eyeBg:B.eyeBg,ink:B.muzzle?'#f1f1f1':null});
   if(opt.fem) g+=`<g transform="translate(${hr-8} ${hy-hr+4}) rotate(20)"><path d="M0 0 l-9 -6 v12 z M0 0 l9 -6 v12 z" fill="#ff7aa8" stroke="${OUT}" stroke-width="2" stroke-linejoin="round"/><circle r="3" fill="#ff7aa8" stroke="${OUT}" stroke-width="2"/></g>`;
-  if(opt.look&&opt.look.acc) g+=accSVG(opt.look.acc,hr,hy-2);
-  if(good&&!(opt.look&&(opt.look.acc==='collar'||opt.look.acc==='bandana'))) g+=`<path d="M-14 ${hy+hr-4} q14 10 28 0" fill="none" stroke="#e8584f" stroke-width="5" stroke-linecap="round"/><circle cx="0" cy="${hy+hr+4}" r="5" fill="#f2c14e" stroke="${OUT}" stroke-width="2"/>`;
+  const LK=opt.look||{}, PW=k=>LK[k]&&LK[k]!=='default'?LK[k]:null;
+  if(PW('pshoes')) g+=petShoesSVG(LK.pshoes,[bcx-brx+10,bcx-brx+24,bcx+brx-24,bcx+brx-10],-3);
+  if(PW('glasses')) g+=glassesSVG(LK.glasses,hy+1);
+  if(PW('hat')) g+=hatSVG(LK.hat,hr,hy);
+  if(PW('neck')) g+=neckSVG(LK.neck,hy+hr-4,17);
+  if(good&&!PW('neck')) g+=`<path d="M-14 ${hy+hr-4} q14 10 28 0" fill="none" stroke="#e8584f" stroke-width="5" stroke-linecap="round"/><circle cx="0" cy="${hy+hr+4}" r="5" fill="#f2c14e" stroke="${OUT}" stroke-width="2"/>`;
   return g;
 }
 function shade(hex){ const n=parseInt(hex.slice(1),16); const f=v=>Math.max(0,Math.round(v*.78)); return '#'+[f(n>>16&255),f(n>>8&255),f(n&255)].map(v=>v.toString(16).padStart(2,'0')).join(''); }
@@ -1119,7 +1272,7 @@ function setupPan(){
 function tickWalk(p,m){
   if(p.asleep||m==='sick'){return;}
   if(p.hidden) return;
-  if(Math.random()<.5){ const lo=p.stage==='baby'?380:60, hi=p.stage==='baby'?600:WORLD-60; if(walkX<lo||walkX>hi) walkX=Math.round(rnd(lo,hi)); const nx=Math.round(Math.max(lo,Math.min(hi,walkX+rnd(-110,110)))); walkDir=nx<walkX?-1:1; walkX=nx; }
+  if(Math.random()<.5){ const lo=60, hi=p.stage==='baby'?600:WORLD-60; if(walkX<lo||walkX>hi) walkX=Math.round(rnd(lo,hi)); const nx=Math.round(Math.max(lo,Math.min(hi,walkX+rnd(-110,110)))); walkDir=nx<walkX?-1:1; walkX=nx; }
 }
 function drawPet(move){
   const p=S.pet; if(!p) return;
@@ -1185,7 +1338,8 @@ function render(){
     else if(p.stage==='teen'){ $('gSub').innerHTML=`<span>Станет взрослым через <b>${dur(ADULT_AT-age)}</b></span><span>Успел: <b>${cr.ok} из ${cr.total}</b></span>`; }
     else $('gSub').innerHTML=`<span>Возраст <b>${dur(age)}</b></span>`;
     if(p.evoNote){ $('evo').hidden=false; $('evo').innerHTML=`<b>${esc(p.evoNote.title)}</b><span>${p.evoNote.why}</span><span>${fem(p.evoNote.hint,p.sex)}</span><button id="evoOk" type="button">Понятно</button>`; $('evoOk').onclick=()=>{p.evoNote=null;save();render();}; } else $('evo').hidden=true;
-    $('sndBtn').textContent='звук: '+(S.sound===false?'выкл':'вкл'); $('sndBtn').onclick=()=>{S.sound=S.sound===false;save();unlockAudio();if(S.sound!==false)sfx('happy');render();};
+    $('styleBtn').textContent=view==='style'?'закрыть стиль':'стиль · '+(S.coins||0); $('styleBtn').hidden=!!mg||!!p.outside; $('styleBtn').onclick=()=>act('style');
+    $('sndBtn').textContent=S.sound===false?'звук выкл':'звук'; $('sndBtn').onclick=()=>{S.sound=S.sound===false;save();unlockAudio();if(S.sound!==false)sfx('happy');render();};
     const n=needs(p); let kind,text;
     const kidHints=p.stage==='baby';
     if(n.length){kind='need';text=kidHints?n.join(', '):'что-то не так — осмотри комнату';}
@@ -1229,7 +1383,7 @@ function render(){
         <button class="btn" data-a="heal">Лечить<small>таблетка</small></button>
         <button class="btn" data-a="light">Свет<small>${p.light?'вкл':'выкл'}</small></button>
         <button class="btn" data-a="scold" ${z?'disabled':''}>Отругать<small>воспитание</small></button>
-        <button class="btn wide" data-a="status" style="grid-column:span 2">${view==='status'?'Назад к нему':'Состояние'}</button><button class="btn" data-a="style">Стиль<small>${S.coins||0} ${coinWord(S.coins||0)}</small></button>`;
+        <button class="btn wide" data-a="status">${view==='status'?'Назад к нему':'Состояние'}</button>`;
     }
     if($('actions').dataset.h!==html){$('actions').innerHTML=html;$('actions').dataset.h=html;}
     $('actions').querySelectorAll('button').forEach(x=>x.onclick=()=>{ if(x.dataset.r==='name'){ const v=($('relName').value||'').trim(); if(!v){ $('relErr').textContent='Напиши имя, чтобы познакомиться.'; return; } simulate(); if(S.pet){ nameRel(S.pet,v); save(); } render(); return; } if(x.dataset.r){ if(x.dataset.r!=='status2'){ simulate(); if(S.pet){ relAct(S.pet,x.dataset.r); save(); } render(); } } else act(x.dataset.a); });
@@ -1273,15 +1427,13 @@ $('newBtn').onclick=()=>{S.lastDead=null;save();render();};
 
 load(); migrate(); setupPan(); render();
 setInterval(()=>{frame++; if(S.pet){ simulate(); if(!S.pet){render();return;} if(frame%5===0) render(); drawPet(frame%2===0); } titleTick(); },1000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden) render();});
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) render(); syncNow(document.hidden); });
+window.addEventListener('pagehide',()=>syncNow(true));
+setInterval(()=>{ if(!document.hidden) syncNow(false); },120000);
+setTimeout(()=>syncNow(false),1500);
 })();
 </script>
 
-<script>
-(function(){ try{ const T=window.Telegram&&Telegram.WebApp; if(!T) return;
-  T.ready(); T.expand(); if(T.disableVerticalSwipes) T.disableVerticalSwipes();
-  if(T.setHeaderColor) T.setHeaderColor('#2b3a55'); if(T.setBackgroundColor) T.setBackgroundColor('#22304a');
-}catch(e){} })();
-</script>
+<script>(function(){try{const T=window.Telegram&&Telegram.WebApp;if(!T)return;T.ready();T.expand();if(T.disableVerticalSwipes)T.disableVerticalSwipes();if(T.setHeaderColor)T.setHeaderColor('#2b3a55');if(T.setBackgroundColor)T.setBackgroundColor('#22304a');}catch(e){}})();</script>
 </body>
 </html>
