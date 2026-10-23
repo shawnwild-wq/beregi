@@ -627,7 +627,7 @@ function act(a){
 let mg=null, mgRaf=null;
 function stopTimers(){cancelAnimationFrame(mgRaf);}
 const RULES={
-  lifter:'Три попытки, как на соревнованиях: присед, жим, тяга. Жми «Подъём!», когда метка в зоне, и три судьи зажгут лампы.',
+  lifter:'Как на соревнованиях: присед, жим и тяга, по три попытки, и каждый раз вес больше. Жми «Подъём!», когда метка в зоне, и три судьи зажгут лампы.',
   hamster:'Он бежит в колесе. Жми «Крути!», когда метка в зоне, и он разгонится.',
   trainer:'Метка медленно ходит туда-сюда. Нажми «Жми!», когда она внутри зоны посередине. В каждом раунде новое упражнение.',
   office:'Приходит письмо. Реши, важное оно или спам. Времени сколько угодно.',
@@ -646,10 +646,12 @@ const HIDE_ALPHA=['В шкафу','Под кроватью','За шторой',
 const FETCH=['В кусты','В лужу','Под лавочку','За забор','В песочницу','К голубям','Под машину','В клумбу','На горку','В сугроб листьев','За гараж','В фонтан','К соседу','Под качели','На крышу сарая'];
 const HIDE_CAT=['В коробке','Под диваном','В шкафу','На холодильнике','За шторой','В раковине','В пакете','Под кроватью','На подоконнике','В корзине','В чемодане','За телевизором','На шкафу','В ящике стола','В тапке'];
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+const mgTotal=()=>mg&&mg.type==='lifter'?9:5, mgNeed=()=>mg&&mg.type==='lifter'?6:3;
 function startGame(p){
   mg={type:p.type,round:0,score:0,phase:'intro',quit:false};
   if(p.type==='trainer') mg.deck=shuffle(EXERCISES);
-  if(p.type==='lifter') mg.deck=['Присед','Жим лёжа','Становая тяга','Присед','Жим лёжа'];
+  if(p.type==='lifter'){ const W=isF(p)?[[110,117.5,122.5],[62.5,67.5,70],[140,150,157.5]]:[[180,192.5,200],[120,127.5,132.5],[220,235,245]];
+    mg.deck=[['Присед',0,0],['Присед',0,1],['Присед',0,2],['Жим лёжа',1,0],['Жим лёжа',1,1],['Жим лёжа',1,2],['Становая тяга',2,0],['Становая тяга',2,1],['Становая тяга',2,2]].map(([n,i,a])=>n+' — '+(a+1)+'-я попытка, '+String(W[i][a]).replace('.',',')+' кг'); }
   if(p.type==='hamster') mg.deck=shuffle(['Разгон','Круг почёта','Спринт','Марафон','Рывок','Турбо','Ещё круг','Финишная прямая']);
   if(p.type==='office'){ const imp=shuffle(MAILS.filter(m=>m[1])), sp=shuffle(MAILS.filter(m=>!m[1])); const nImp=2+Math.floor(Math.random()*2); mg.deck=shuffle(imp.slice(0,nImp).concat(sp.slice(0,5-nImp))); }
   if(p.type==='student') mg.deck=shuffle(QUIZ);
@@ -668,7 +670,7 @@ function nextRound(){
   if(mg.type==='zoomer'){ mg.opts=mg.deck.slice(r*2,r*2+2); mg.ans=Math.random()<.5?0:1; }
   if(mg.type==='alpha'||mg.type==='cat'||mg.type==='dog'){ mg.opts=mg.deck.slice(r*3,r*3+3); mg.ans=Math.floor(Math.random()*3); }
   renderMG();
-  if(mg.type==='trainer'||mg.type==='hamster'||mg.type==='lifter'){ mg.t0=performance.now(); const loop=()=>{ if(!mg||mg.phase!=='play') return; const el=document.querySelector('.meter .mark'); const ph=((performance.now()-mg.t0)/1500)%2; mg.pos=(ph<1?ph:2-ph)*100; if(el) el.style.left='calc('+mg.pos+'% - 3px)'; mgRaf=requestAnimationFrame(loop); }; mgRaf=requestAnimationFrame(loop); }
+  if(mg.type==='trainer'||mg.type==='hamster'||mg.type==='lifter'){ mg.t0=performance.now(); const loop=()=>{ if(!mg||mg.phase!=='play') return; const el=document.querySelector('.meter .mark'); const ph=((performance.now()-mg.t0)/(mg.type==='lifter'?1700:1500))%2; mg.pos=(ph<1?ph:2-ph)*100; if(el) el.style.left='calc('+mg.pos+'% - 3px)'; mgRaf=requestAnimationFrame(loop); }; mgRaf=requestAnimationFrame(loop); }
 }
 function endRound(hit,note){
   stopTimers(); if(!mg||mg.phase!=='play') return;
@@ -678,23 +680,23 @@ function endRound(hit,note){
 }
 function finishGame(){
   stopTimers(); const p=S.pet; if(!p||!mg){mg=null;render();return;}
-  const win=mg.score>=3, c=CH[p.type];
-  if(win){p.stats.happy=clamp(p.stats.happy+25);p.extra=Math.max(-2*c.fatDiv,p.extra-c.w.game);p.msg='Победа '+mg.score+' из 5! Он доволен и немного похудел.';}
-  else {p.stats.happy=clamp(p.stats.happy+15);p.msg='Проиграли '+mg.score+' из 5. Но было весело.';}
+  const win=mg.score>=mgNeed(), c=CH[p.type], T=mgTotal();
+  if(win){p.stats.happy=clamp(p.stats.happy+25);p.extra=Math.max(-2*c.fatDiv,p.extra-c.w.game);p.msg=mg.type==='lifter'?('Засчитано '+mg.score+' из '+T+' попыток! Отличное выступление, он доволен.'):('Победа '+mg.score+' из '+T+'! Он доволен и немного похудел.');}
+  else {p.stats.happy=clamp(p.stats.happy+15);p.msg=mg.type==='lifter'?('Засчитано '+mg.score+' из '+T+'. Не лучший день, но опыт есть.'):('Проиграли '+mg.score+' из '+T+'. Но было весело.');}
   p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; if(p.stats.happy>40) resolveEv(p,'bored');
   mg=null; save(); render();
 }
 function renderMG(){
   const v=document.getElementById('mgView'); if(!mg){v.hidden=true;return;}
   const c=CH[mg.type]; let body='';
-  const head=`<h3><span>${c.game}</span><span>${mg.phase==='intro'?'5 раундов':'Раунд '+Math.min(mg.round+(mg.phase==='play'?1:0),5)+'/5 · очки '+mg.score}</span></h3>`;
+  const head=`<h3><span>${c.game}</span><span>${mg.phase==='intro'?(mgTotal()+(mg.type==='lifter'?' попыток':' раундов')):(mg.type==='lifter'?'Попытка ':'Раунд ')+Math.min(mg.round+(mg.phase==='play'?1:0),mgTotal())+'/'+mgTotal()+' · '+(mg.type==='lifter'?'засчитано ':'очки ')+mg.score}</span></h3>`;
   if(mg.phase==='intro'){
-    body=`<div class="q">${RULES[mg.type]}<br>Угадай 3 из 5, и он будет счастлив.</div><div class="lcdbtns"><button id="mgGo">Начать</button></div>`;
+    body=`<div class="q">${RULES[mg.type]}<br>${mg.type==='lifter'?'Засчитай 6 попыток из 9, и он будет счастлив.':'Угадай 3 из 5, и он будет счастлив.'}</div><div class="lcdbtns"><button id="mgGo">Начать</button></div>`;
   } else if(mg.phase==='result'){
-    const last=mg.round>=5;
-    body=`<div class="q"><b>${mg.hit?'Есть! +1':'Мимо.'}</b>${mg.note?'<br>'+mg.note:''}</div><div class="lcdbtns"><button id="mgGo">${last?'Итог':'Следующий раунд'}</button></div>`;
+    const last=mg.round>=mgTotal();
+    body=`<div class="q"><b>${mg.type==='lifter'?mg.ex:(mg.hit?'Есть! +1':'Мимо.')}</b>${mg.note?'<br>'+mg.note:''}</div><div class="lcdbtns"><button id="mgGo">${last?'Итог':'Следующий раунд'}</button></div>`;
   } else if(mg.type==='trainer'||mg.type==='hamster'||mg.type==='lifter'){
-    body=`<div class="q"><b>${mg.ex}</b><br>Жми, когда метка в зоне.</div><div class="meter"><div class="zone"></div><div class="mark"></div></div><div class="lcdbtns"><button id="mgA">${mg.type==='hamster'?'Крути!':mg.type==='lifter'?'Подъём!':'Жми!'}</button></div>`;
+    body=`<div class="q"><b>${mg.ex}</b><br>${mg.type==='lifter'?'Жми «Подъём!», когда метка в зоне.':'Жми, когда метка в зоне.'}</div><div class="meter"><div class="zone" style="${mg.type==='lifter'?'left:35%;width:30%':''}"></div><div class="mark"></div></div><div class="lcdbtns"><button id="mgA">${mg.type==='hamster'?'Крути!':mg.type==='lifter'?'Подъём!':'Жми!'}</button></div>`;
   } else if(mg.type==='office'){
     body=`<div class="q">${mg.mail[0]}</div><div class="lcdbtns"><button id="mgA">Важное</button><button id="mgB">В спам</button></div>`;
   } else if(mg.type==='student'){
@@ -710,9 +712,14 @@ function renderMG(){
   }
   v.innerHTML=head+body+`<button class="mgquit" id="mgQuit">${mg.quit?'Точно выйти? Нажми ещё раз':'Выйти из игры'}</button>`; v.hidden=false;
   const A=document.getElementById('mgA'),B=document.getElementById('mgB'),G=document.getElementById('mgGo');
-  if(G) G.onclick=()=>{ if(mg.phase==='result'&&mg.round>=5) finishGame(); else nextRound(); };
+  if(G) G.onclick=()=>{ if(mg.phase==='result'&&mg.round>=mgTotal()) finishGame(); else nextRound(); };
   if(mg.phase==='play'){
-    if(mg.type==='trainer'||mg.type==='hamster'||mg.type==='lifter') A.onclick=()=>{const ok=mg.pos>=38&&mg.pos<=62; const H=mg.type==='hamster', L=mg.type==='lifter'; endRound(ok, L?(ok?mg.ex+': ⚪⚪⚪ вес засчитан!':mg.ex+': 🔴🔴⚪ не засчитано.'):ok?mg.ex+(H?': колесо раскрутилось!':': чистое повторение.'):mg.ex+(H?': соскочил с колеса.':': сбился с темпа.'));};
+    if(mg.type==='trainer'||mg.type==='hamster'||mg.type==='lifter') A.onclick=()=>{ const H=mg.type==='hamster', L=mg.type==='lifter';
+      if(L){ const d=Math.abs(mg.pos-50), ok=d<=15, lift=mg.ex.split(' — ')[0];
+        const R={'Присед':['недосед, не хватило глубины','не дождался команды «Присед»','двойное вставание'],'Жим лёжа':['оторвал таз от скамьи','не дождался команды «Жим»','штанга пошла вниз при выжимании'],'Становая тяга':['не дожал колени','опустил до команды «Вниз»','подсед под штангу']}[lift]||['не засчитано'];
+        const why=R[Math.floor(Math.random()*R.length)];
+        endRound(ok, d<=6?'⚪⚪⚪ Три белые. Вес засчитан!':ok?'⚪⚪🔴 Две белые. Вес засчитан!':d<=24?'🔴🔴⚪ Не засчитано: '+why+'.':'🔴🔴🔴 Не засчитано: '+why+'.'); return; }
+      const ok=mg.pos>=38&&mg.pos<=62; endRound(ok, ok?mg.ex+(H?': колесо раскрутилось!':': чистое повторение.'):mg.ex+(H?': соскочил с колеса.':': сбился с темпа.'));};
     if(mg.type==='office'){A.onclick=()=>endRound(mg.mail[1]===1, mg.mail[1]?'Правильно, это важное.':'Это был спам.');B.onclick=()=>endRound(mg.mail[1]===0, mg.mail[1]?'Это было важное письмо!':'Правильно, в спам.');}
     if(mg.type==='student'){const r=i=>endRound(mg.ans===i,'Правильный ответ: '+mg.opts[mg.ans]+'.');A.onclick=()=>r(0);B.onclick=()=>r(1);}
     if(mg.type==='zoomer'){const r=i=>endRound(mg.ans===i,'Залетело видео «'+mg.opts[mg.ans]+'».');A.onclick=()=>r(0);B.onclick=()=>r(1);}
