@@ -404,10 +404,14 @@ function step(p,t){
   if(st==='baby'){ const m=Math.floor((t-p.born)/MIN); if(p.scriptIdx==null) p.scriptIdx=0;
     while(p.scriptIdx<SCRIPT.length&&SCRIPT[p.scriptIdx][0]<=m&&!p.ev){ startEv(p,SCRIPT[p.scriptIdx][1],t); p.scriptIdx++; } }
   if(p.ev&&t>p.ev.deadline) missEv(p);
-  const napping=p.napUntil&&t<p.napUntil, night=(st!=='baby'&&isNight(t))||napping;
-  if(night&&!p.asleep){p.asleep=true;p.sleptAt=t;p.lightPenalized=false;p.call=null;if(p.ev&&p.ev.type!=='nap')p.ev=null;p.hidden=null;}
-  if(!night&&p.asleep){p.asleep=false;p.light=true;p.msg=napping===false&&p.napUntil?'Проснулся после тихого часа!':'Доброе утро!';p.napUntil=0;}
-  const k=1/60, slow=p.asleep?.2:1;
+  let babyNight=false;
+  if(st==='baby'&&isNight(t)){ if(p.nightAwakeStart==null) p.nightAwakeStart=t; if(t-p.nightAwakeStart>=5*MIN) babyNight=true; }
+  else if(st==='baby') p.nightAwakeStart=null;
+  const napping=p.napUntil&&t<p.napUntil, night=(st!=='baby'&&isNight(t))||napping||babyNight;
+  if(night&&!p.asleep){p.asleep=true;p.sleptAt=t;p.lightPenalized=false;p.call=null;if(p.ev&&(p.ev.type!=='nap'||babyNight))p.ev=null;p.hidden=null; if(babyNight){p.napUntil=0;p.msg='Я маленький, мне пора спать. Проснусь в 7:00 🌙';}}
+  if(!night&&p.asleep){p.asleep=false;p.light=true;p.msg=st==='baby'&&!p.napUntil?'Доброе утро! Я проснулся, давай знакомиться':napping===false&&p.napUntil?'Проснулся после тихого часа!':'Доброе утро!';p.napUntil=0;}
+  if(babyNight&&p.asleep){ p.born+=MIN; if(p.ev) p.ev.deadline+=MIN; }
+  const k=1/60, slow=babyNight?0:(p.asleep?.2:1);
   s.hunger=clamp(s.hunger-R.hunger*(s.happy<=0?1.5:1)*k*slow);
   s.happy=clamp(s.happy-R.happy*k*slow);
   if(p.asleep||st==='baby'){p.nextPoop+=MIN;p.nextCall+=MIN;}
@@ -419,7 +423,7 @@ function step(p,t){
   if(p.call&&t-p.call.since>20*MIN){p.call=null;s.disc=clamp(s.disc-10);}
   if(p.call&&(!p.ev||p.ev.type!=='caprice')&&st==='baby'&&t-p.call.since>4*MIN){p.call=null;}
   if(st!=='baby'&&!p.sick&&p.poop>0&&Math.random()<.0025*p.poop){p.sick=true;p.doses=Math.random()<.5?2:1;}
-  if(!napping&&p.asleep&&p.light&&!p.lightPenalized&&t-p.sleptAt>30*MIN){p.lightPenalized=true;p.mistakes++;s.happy=clamp(s.happy-25);p.msg='Ты не выключил свет. Он плохо спал.';}
+  if(!napping&&!babyNight&&p.asleep&&p.light&&!p.lightPenalized&&t-p.sleptAt>30*MIN){p.lightPenalized=true;p.mistakes++;s.happy=clamp(s.happy-25);p.msg='Ты не выключил свет. Он плохо спал.';}
   if(p.extra>0) p.extra=Math.max(0,p.extra-CH[p.type].w.burn/(24*60)*(p.stage==='baby'?6:1));
   if(p.type==='lifter'&&st!=='baby'){
     const c=CH.lifter;
@@ -497,19 +501,21 @@ function forecast(fromNow){
   const p=JSON.parse(JSON.stringify(p0)), notes=[], sx=p.sex, nm=p.name;
   const say=t=>fem(nm+': '+t,sx);
   const keyset=q=>{ const n=needs(q).slice(); if(q.call) n.push('зовёт тебя'); if(q.hidden) n.push('куда-то спрятался, найди его'); return n; };
-  let prev=new Set(keyset(p)), stage=p.stage, prevWarn=!!p.meetWarned, prevMeets=p.meetsDone||0;
+  let prev=new Set(keyset(p)), stage=p.stage, prevWarn=!!p.meetWarned, prevMeets=p.meetsDone||0, prevSleep=!!p.asleep;
   const end=p.lastTick+48*HOUR; FORECAST=true;
   try{
     for(let t=p.lastTick+MIN;t<=end&&notes.length<25;t+=MIN){
       p.lastTick=t; const cause=stepSeeded(p,t);
       if(cause){ notes.push({at:t,text:fem(nm+' умер от '+cause+'. Его больше не вернуть.',sx)}); break; }
+      if(prevSleep&&!p.asleep&&p.stage==='baby'&&isNight(t-MIN)) notes.push({at:t,text:fem('Доброе утро! Я проснулся, давай знакомиться 🥺',sx)});
+      prevSleep=!!p.asleep;
       if(p.type==='lifter'){
         if(p.meetWarned&&!prevWarn) notes.push({at:t,text:fem('Через сутки соревнования! Не корми меня зефиром, мне в категорию влезать 🏋️',sx)});
         if((p.meetsDone||0)>prevMeets) notes.push({at:t,text:fem(p.meetResult==='win'?'Я выступил! Три белые лампы, медаль 🥇 Приходи посмотреть':'Я не прошёл взвешивание… Мне так обидно 😭',sx)});
         prevWarn=!!p.meetWarned; prevMeets=p.meetsDone||0;
       }
       if(p.stage!==stage){ stage=p.stage; notes.push({at:t,text:fem('Я вырос! Приходи посмотреть на меня 😏',sx)}); }
-      const cur=keyset(p), fresh=cur.filter(x=>!prev.has(x));
+      const cur=keyset(p), fresh=cur.filter(x=>!prev.has(x)&&!(x==='выключи свет'&&p.stage==='baby'));
       if(fresh.length&&t>=fromNow){ const tx=voice(fresh,t,sx); if(tx) notes.push({at:t,text:tx}); }
       prev=p.asleep?new Set([...prev,...cur]):new Set(cur);
     }
@@ -1467,7 +1473,7 @@ function render(){
     $('gStage').textContent=stageName(p);
     const age=Date.now()-p.born, cr=care(p);
     dailyCoins();
-    if(p.stage==='baby'){ const left=HOUR-age; $('gSub').innerHTML=`<span>Вырастет через <b>${Math.max(1,Math.ceil(left/MIN))} мин</b></span><span>Успел на зов: <b>${cr.ok1} из ${cr.total1}</b></span><div class="bar"><span style="width:${Math.min(100,age/HOUR*100)}%"></span></div>`; }
+    if(p.stage==='baby'){ const left=HOUR-age; $('gSub').innerHTML=`<span>Вырастет через <b>${Math.max(1,Math.ceil(left/MIN))} мин</b>${p.asleep&&isNight(Date.now())?' · на паузе до 7:00':''}</span><span>Успел на зов: <b>${cr.ok1} из ${cr.total1}</b></span><div class="bar"><span style="width:${Math.min(100,age/HOUR*100)}%"></span></div>`; }
     else if(p.stage==='teen'){ $('gSub').innerHTML=`<span>Станет взрослым через <b>${dur(ADULT_AT-age)}</b></span><span>Успел: <b>${cr.ok} из ${cr.total}</b></span>`; }
     else $('gSub').innerHTML=`<span>Возраст <b>${dur(age)}</b></span>`;
     if(p.evoNote){ $('evo').hidden=false; $('evo').innerHTML=`<b>${esc(p.evoNote.title)}</b><span>${p.evoNote.why}</span><span>${fem(p.evoNote.hint,p.sex)}</span><button id="evoOk" type="button">Понятно</button>`; $('evoOk').onclick=()=>{p.evoNote=null;save();render();}; } else $('evo').hidden=true;
@@ -1476,7 +1482,8 @@ function render(){
     const n=needs(p); let kind,text;
     const kidHints=p.stage==='baby';
     if(n.length){kind='need';text=kidHints?n.join(', '):'что-то не так — осмотри комнату';}
-    else if(p.asleep){kind='sleep';text='спит';}
+    else if(p.asleep){kind='sleep';text=p.stage==='baby'&&isNight(Date.now())?'спит до 7:00':'спит';}
+    else if(p.stage==='baby'&&isNight(Date.now())&&p.nightAwakeStart!=null){kind='sleep';text='через '+Math.max(1,5-Math.floor((Date.now()-p.nightAwakeStart)/MIN))+' мин уснёт до утра — малыши ночью спят';}
     else if(p.hidden){kind='riddle';text=kidHints?'спрятался! Нажимай на мебель, чтобы найти':'его нигде не видно…';}
     else if(p.call){kind='riddle';text=kidHints?'зовёт без причины — попробуй «Отругать»':'зовёт…';}
     else {kind='ok';text=!kidHints?'бодрствует':p.stats.hunger<=50?'хочет есть — нажми «Еда»':p.stats.happy<=50?'хочет поиграть — нажми «Игра»':'бодрствует, всё отлично';}
