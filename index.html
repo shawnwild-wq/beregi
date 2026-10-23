@@ -268,7 +268,16 @@ CH.dog={title:'Пёс',titleF:'Собака',human:false,base:12,w:{meal:0,snack
     eat:['Хрум! Миска вылизана до блеска.','Виляет хвостом: вкусно!'],
     treat:['Косточка! Лучший день!','Унёс вкусняшку в угол и грызёт.'],
     cleaned:'Убрано. Он делает вид, что это был не он.'};
-const ORDER=['trainer','office','student','cat','dog','zoomer','alpha'];
+CH.hamster={title:'Хомяк',titleF:'Хомячиха',human:false,base:0,w:{meal:0,snack:4,game:4,burn:10},fatDiv:8,
+    names:{baby:'Хомячонок',teen:'Шустрый хомяк',teenBad:'Вредный хомяк',good:'Хомяк-атлет',bad:'Хомяк-пончик'},
+    namesF:{baby:'Хомячонок',teen:'Шустрая хомячиха',teenBad:'Вредная хомячиха',good:'Хомячиха-атлетка',bad:'Хомячиха-пончик'},
+    food:{baby:['Молочко','Кусочек яблока'],big:['Семечки и морковка','Орешек']},
+    game:'Колесо',clean:'Убрать шелуху',mess:'seeds',
+    calls:['Грызёт прутья клетки','Прячет еду за щёки','Пытается сбежать','Шуршит опилками'],
+    eat:['Набил щёки до отказа.','Хрум-хрум, всё за щёки.'],
+    treat:['Орешек! Спрятал на чёрный день.','Щёки стали в два раза больше.'],
+    cleaned:'Шелуха убрана. Он тут же насорил снова, но чуть-чуть.'};
+const ORDER=['trainer','office','student','cat','dog','hamster','zoomer','alpha'];
 CH.trainer.titleF='Фитнес-тренер'; CH.trainer.namesF={baby:'Стажёрка',teen:'Юная тренерша',teenBad:'Ленивая тренерша',good:'Тренер-чемпионка',bad:'Диванная тренерша'};
 CH.office.titleF='Офисная сотрудница'; CH.office.namesF={baby:'Новенькая',teen:'Исполнительная сотрудница',teenBad:'Офисная ворчунья',good:'Начальница отдела',bad:'Вечная помощница'};
 CH.student.titleF='Студентка'; CH.student.namesF={baby:'Первокурсница',teen:'Студентка-зубрила',teenBad:'Прогульщица',good:'Отличница',bad:'Вечная студентка'};
@@ -283,7 +292,7 @@ const FEMW=[['он','она'],['Он','Она'],['его','её'],['Его','Е�
  ['спрятался','спряталась'],['Вышел','Вышла'],['вышел','вышла'],['Вернулся','Вернулась'],['похудел','похудела'],['доволен','довольна'],['Принёс','Принесла'],['принёс','принесла'],['Уснул','Уснула'],['спал','спала'],
  ['Прожил','Прожила'],['прожил','прожила'],['Дожил','Дожила'],['Умер','Умерла'],['умер','умерла'],['был','была'],['Разбудили. Ворчит','Разбудили. Ворчит'],['маленький','маленькая'],['голодный','голодная'],['Нашёл! Он','Нашла! Она'],['Нашёл!','Нашла!']];
 function fem(t,sex){ if(sex!=='f'||!t) return t; let r=String(t); FEMW.forEach(([m,f])=>{ r=r.replace(new RegExp('(^|[^А-Яа-яЁё])'+m+'(?=[^А-Яа-яЁё]|$)','g'),'$1'+f); }); return r; }
-const CAT_NORM={baby:1,teen:2.5,adult:4}, DOG_NORM={baby:3,teen:7,adult:12};
+const CAT_NORM={baby:1,teen:2.5,adult:4}, DOG_NORM={baby:3,teen:7,adult:12}, HAM_NORM={baby:20,teen:80,adult:150};
 /* скорость в единицах из 100 в час */
 const RATE={baby:{hunger:300,happy:240,poop:[10,18],call:[8,14]},
             teen:{hunger:25,happy:20,poop:[90,180],call:[120,240]},
@@ -332,7 +341,7 @@ const stageOf=age=>age<HOUR?'baby':age<ADULT_AT?'teen':'adult';
 function stageName(p){const n=isF(p)?CH[p.type].namesF:CH[p.type].names; if(p.stage==='adult') return n[p.form||'good']; if(p.stage==='teen'&&p.teenForm==='bad') return n.teenBad; return n[p.stage];}
 function foods(p){return CH[p.type].food[p.stage==='baby'?'baby':'big'];}
 function fatLevel(p){let f=Math.max(0,Math.round(p.extra/CH[p.type].fatDiv)); if(p.form==='bad') f+=2; return Math.min(f,6);}
-function weightText(p){const c=CH[p.type]; const w=(c.human?c.base:(p.type==='dog'?DOG_NORM:CAT_NORM)[p.stage])+p.extra; return (c.human||p.type==='dog'?w.toFixed(1):w.toFixed(2))+' кг';}
+function weightText(p){const c=CH[p.type]; if(p.type==='hamster') return Math.round(HAM_NORM[p.stage]+p.extra)+' г'; const w=(c.human?c.base:(p.type==='dog'?DOG_NORM:CAT_NORM)[p.stage])+p.extra; return (c.human||p.type==='dog'?w.toFixed(1):w.toFixed(2))+' кг';}
 const asleep=p=>p.asleep;
 
 /* ================= симуляция ================= */
@@ -556,6 +565,7 @@ function act(a){
 let mg=null, mgRaf=null;
 function stopTimers(){cancelAnimationFrame(mgRaf);}
 const RULES={
+  hamster:'Он бежит в колесе. Жми «Крути!», когда метка в зоне, и он разгонится.',
   trainer:'Метка медленно ходит туда-сюда. Нажми «Жми!», когда она внутри зоны посередине. В каждом раунде новое упражнение.',
   office:'Приходит письмо. Реши, важное оно или спам. Времени сколько угодно.',
   student:'Он сдаёт экзамен. Помоги выбрать правильный ответ.',
@@ -576,6 +586,7 @@ function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor
 function startGame(p){
   mg={type:p.type,round:0,score:0,phase:'intro',quit:false};
   if(p.type==='trainer') mg.deck=shuffle(EXERCISES);
+  if(p.type==='hamster') mg.deck=shuffle(['Разгон','Круг почёта','Спринт','Марафон','Рывок','Турбо','Ещё круг','Финишная прямая']);
   if(p.type==='office'){ const imp=shuffle(MAILS.filter(m=>m[1])), sp=shuffle(MAILS.filter(m=>!m[1])); const nImp=2+Math.floor(Math.random()*2); mg.deck=shuffle(imp.slice(0,nImp).concat(sp.slice(0,5-nImp))); }
   if(p.type==='student') mg.deck=shuffle(QUIZ);
   if(p.type==='zoomer') mg.deck=shuffle(TRENDS);
@@ -587,13 +598,13 @@ function startGame(p){
 function nextRound(){
   stopTimers(); mg.phase='play'; mg.quit=false;
   const r=mg.round;
-  if(mg.type==='trainer') mg.ex=mg.deck[r];
+  if(mg.type==='trainer'||mg.type==='hamster') mg.ex=mg.deck[r];
   if(mg.type==='office') mg.mail=mg.deck[r];
   if(mg.type==='student'){ const q=mg.deck[r]; mg.q=q[0]; mg.opts=shuffle([q[1],q[2]]); mg.ans=mg.opts.indexOf(q[1]); }
   if(mg.type==='zoomer'){ mg.opts=mg.deck.slice(r*2,r*2+2); mg.ans=Math.random()<.5?0:1; }
   if(mg.type==='alpha'||mg.type==='cat'||mg.type==='dog'){ mg.opts=mg.deck.slice(r*3,r*3+3); mg.ans=Math.floor(Math.random()*3); }
   renderMG();
-  if(mg.type==='trainer'){ mg.t0=performance.now(); const loop=()=>{ if(!mg||mg.phase!=='play') return; const el=document.querySelector('.meter .mark'); const ph=((performance.now()-mg.t0)/1500)%2; mg.pos=(ph<1?ph:2-ph)*100; if(el) el.style.left='calc('+mg.pos+'% - 3px)'; mgRaf=requestAnimationFrame(loop); }; mgRaf=requestAnimationFrame(loop); }
+  if(mg.type==='trainer'||mg.type==='hamster'){ mg.t0=performance.now(); const loop=()=>{ if(!mg||mg.phase!=='play') return; const el=document.querySelector('.meter .mark'); const ph=((performance.now()-mg.t0)/1500)%2; mg.pos=(ph<1?ph:2-ph)*100; if(el) el.style.left='calc('+mg.pos+'% - 3px)'; mgRaf=requestAnimationFrame(loop); }; mgRaf=requestAnimationFrame(loop); }
 }
 function endRound(hit,note){
   stopTimers(); if(!mg||mg.phase!=='play') return;
@@ -618,8 +629,8 @@ function renderMG(){
   } else if(mg.phase==='result'){
     const last=mg.round>=5;
     body=`<div class="q"><b>${mg.hit?'Есть! +1':'Мимо.'}</b>${mg.note?'<br>'+mg.note:''}</div><div class="lcdbtns"><button id="mgGo">${last?'Итог':'Следующий раунд'}</button></div>`;
-  } else if(mg.type==='trainer'){
-    body=`<div class="q"><b>${mg.ex}</b><br>Жми, когда метка в зоне.</div><div class="meter"><div class="zone"></div><div class="mark"></div></div><div class="lcdbtns"><button id="mgA">Жми!</button></div>`;
+  } else if(mg.type==='trainer'||mg.type==='hamster'){
+    body=`<div class="q"><b>${mg.ex}</b><br>Жми, когда метка в зоне.</div><div class="meter"><div class="zone"></div><div class="mark"></div></div><div class="lcdbtns"><button id="mgA">${mg.type==='hamster'?'Крути!':'Жми!'}</button></div>`;
   } else if(mg.type==='office'){
     body=`<div class="q">${mg.mail[0]}</div><div class="lcdbtns"><button id="mgA">Важное</button><button id="mgB">В спам</button></div>`;
   } else if(mg.type==='student'){
@@ -637,7 +648,7 @@ function renderMG(){
   const A=document.getElementById('mgA'),B=document.getElementById('mgB'),G=document.getElementById('mgGo');
   if(G) G.onclick=()=>{ if(mg.phase==='result'&&mg.round>=5) finishGame(); else nextRound(); };
   if(mg.phase==='play'){
-    if(mg.type==='trainer') A.onclick=()=>{const ok=mg.pos>=38&&mg.pos<=62; endRound(ok, ok?mg.ex+': чистое повторение.':mg.ex+': сбился с темпа.');};
+    if(mg.type==='trainer'||mg.type==='hamster') A.onclick=()=>{const ok=mg.pos>=38&&mg.pos<=62; const H=mg.type==='hamster'; endRound(ok, ok?mg.ex+(H?': колесо раскрутилось!':': чистое повторение.'):mg.ex+(H?': соскочил с колеса.':': сбился с темпа.'));};
     if(mg.type==='office'){A.onclick=()=>endRound(mg.mail[1]===1, mg.mail[1]?'Правильно, это важное.':'Это был спам.');B.onclick=()=>endRound(mg.mail[1]===0, mg.mail[1]?'Это было важное письмо!':'Правильно, в спам.');}
     if(mg.type==='student'){const r=i=>endRound(mg.ans===i,'Правильный ответ: '+mg.opts[mg.ans]+'.');A.onclick=()=>r(0);B.onclick=()=>r(1);}
     if(mg.type==='zoomer'){const r=i=>endRound(mg.ans===i,'Залетело видео «'+mg.opts[mg.ans]+'».');A.onclick=()=>r(0);B.onclick=()=>r(1);}
@@ -1006,12 +1017,48 @@ function dog(stage,form,mood,fat,opt={}){
   return g;
 }
 function shade(hex){ const n=parseInt(hex.slice(1),16); const f=v=>Math.max(0,Math.round(v*.78)); return '#'+[f(n>>16&255),f(n>>8&255),f(n&255)].map(v=>v.toString(16).padStart(2,'0')).join(''); }
+BREEDS.hamster=[{id:'ginger',name:'рыжий',fur:'#e8a25a',belly:'#fbe3c8'},{id:'golden',name:'золотистый',fur:'#f2c46a',belly:'#fff3d6'},
+  {id:'white',name:'белый',fur:'#f7f4ee',belly:'#ffffff'},{id:'grey',name:'серый',fur:'#a7a9ad',belly:'#e6e6e8'},
+  {id:'panda',name:'панда',fur:'#f7f4ee',belly:'#ffffff',patch:'#2a2a2e'},{id:'dzhungar',name:'джунгарик',fur:'#9aa0a8',belly:'#f4f4f4',stripe:'#4a4f58'}];
+function hamster(stage,form,mood,fat,opt={}){
+  const B=opt.breed||BREEDS.hamster[0], baby=stage==='baby', good=stage==='adult'&&form==='good', bad=stage==='adult'&&form==='bad';
+  const sick=mood==='sick', fur=sick?'#c9cf9a':B.fur, k=baby?.72:1;
+  const brx=(42+fat*6)*k, bry=(38+fat*3)*k, bcx=0, bcy=-bry-4;
+  const hr=bry*.72, hy=bcy-bry+hr+2;
+  const st=`stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"`, LK=opt.look||{}, PW=k2=>LK[k2]&&LK[k2]!=='default'?LK[k2]:null;
+  let g='';
+  [-1,1].forEach(sx=>g+=`<circle cx="${sx*brx*.55}" cy="${bcy-bry*.82}" r="${10*k+2}" fill="${B.patch||fur}" ${st}/><circle cx="${sx*brx*.55}" cy="${bcy-bry*.82}" r="${5.5*k+1}" fill="${PINK}"/>`);
+  [-1,1].forEach(sx=>g+=`<ellipse cx="${sx*brx*.45}" cy="-4" rx="9" ry="5" fill="#f4b8a8" ${st}/>`);
+  g+=`<ellipse class="${fat>=2?'jig':''}" cx="${bcx}" cy="${bcy}" rx="${brx}" ry="${bry}" fill="${fur}" ${st}/>`;
+  if(B.patch) g+=`<ellipse cx="${-brx*.45}" cy="${bcy-bry*.45}" rx="${brx*.32}" ry="${bry*.32}" fill="${B.patch}"/><ellipse cx="${brx*.5}" cy="${bcy+bry*.3}" rx="${brx*.28}" ry="${bry*.28}" fill="${B.patch}"/>`;
+  if(B.stripe) g+=`<path d="M0 ${bcy-bry+2} v${bry*.38}" stroke="${B.stripe}" stroke-width="6" stroke-linecap="round"/>`;
+  const CC=PW('coat');
+  if(CC) g+=petCoatSVG(LK.coat,0,bcy+bry*.5,brx*.9,bry*.5);
+  else g+=`<ellipse cx="0" cy="${bcy+bry*.42}" rx="${brx*.6}" ry="${bry*.45}" fill="${B.belly}"/>`;
+  const ch=9*k+fat*1.6;
+  [-1,1].forEach(sx=>g+=`<ellipse cx="${sx*(brx*.6)}" cy="${hy+12}" rx="${ch}" ry="${ch*.8}" fill="${B.belly}" opacity=".9"/>`);
+  g+=`<path d="M-3 ${hy+3} h6 l-3 3 z" fill="${PINK}" stroke="${OUT}" stroke-width="1.5" stroke-linejoin="round"/>`;
+  g+=`<path d="M-8 ${hy+5} h-13 M-8 ${hy+8} l-12 3 M8 ${hy+5} h13 M8 ${hy+8} l12 3" stroke="${OUT}" stroke-width="1.3" stroke-linecap="round"/>`;
+  [-1,1].forEach(sx=>g+=`<path d="M${sx*6} ${bcy+bry*.62} q${sx*5} -6 ${sx*12} 0" fill="#f4b8a8" ${st}/>`);
+  if(stage==='teen'&&form==='bad') g+=`<path d="M-18 ${hy-15} l10 4 M18 ${hy-15} l-10 4" stroke="${OUT}" stroke-width="2.5" stroke-linecap="round"/>`;
+  g+=face(hy-9,mood,{cat:true,fat,lazy:bad&&mood==='normal',lash:opt.fem});
+  if(opt.fem) g+=`<g transform="translate(${brx*.5} ${bcy-bry*.9}) rotate(20)"><path d="M0 0 l-8 -5 v10 z M0 0 l8 -5 v10 z" fill="#ff7aa8" stroke="${OUT}" stroke-width="2" stroke-linejoin="round"/><circle r="3" fill="#ff7aa8" stroke="${OUT}" stroke-width="2"/></g>`;
+  if(PW('pshoes')) g+=petShoesSVG(LK.pshoes,[-brx*.45,brx*.45],-4);
+  if(PW('neck')) g+=neckSVG(LK.neck,hy+hr-2,15);
+  if(PW('glasses')) g+=glassesSVG(LK.glasses,hy-6);
+  if(PW('hat')) g+=hatSVG(LK.hat,hr,hy);
+  else if(good) g+=`<polygon points="-14,${bcy-bry+4} -14,${bcy-bry-10} -7,${bcy-bry-3} 0,${bcy-bry-14} 7,${bcy-bry-3} 14,${bcy-bry-10} 14,${bcy-bry+4}" fill="#f2c14e" stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"/>`;
+  return g;
+}
+
 function charSVG(type,stage,form,mood,fat,sex,breed,look){
+  if(type==='hamster') return hamster(stage,form,mood,fat,{fem:sex==='f',breed:breedOf('hamster',breed),look});
   if(CH[type].human) return human(type,stage,form,mood,fat,sex,look);
   const B=breedOf(type,breed);
   return type==='dog'?dog(stage,form,mood,fat,{fem:sex==='f',breed:B,look}):cat(stage,form,mood,fat,{fem:sex==='f',breed:B,look});
 }
 function messSVG(kind,x){
+  if(kind==='seeds') return `<g transform="translate(${x} 200)">${[[-12,-3,20],[-4,-6,-30],[5,-2,60],[13,-5,10],[0,-11,-70],[-8,-12,40]].map(([a,b,r])=>`<ellipse cx="${a}" cy="${b}" rx="4.5" ry="2.4" transform="rotate(${r} ${a} ${b})" fill="#3a3330" stroke="#f2e6c8" stroke-width="1.2"/>`).join('')}</g>`;
   const st=`stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"`;
   if(kind==='poop') return `<g transform="translate(${x} 200)"><g ${st} fill="#8b5a2b"><ellipse cx="0" cy="-7" rx="15" ry="7"/><ellipse cx="0" cy="-16" rx="11" ry="6"/><ellipse cx="1" cy="-24" rx="6" ry="5"/></g><path class="stink" d="M-10 -34 q-4 -5 0 -10 q4 -5 0 -10 M10 -34 q-4 -5 0 -10 q4 -5 0 -10" fill="none" stroke="#7a9a4a" stroke-width="2" stroke-linecap="round"/></g>`;
   if(kind==='dumbbell') return `<g transform="translate(${x} 196) rotate(-8)" ${st}><rect x="-15" y="-3" width="30" height="6" fill="#777"/><rect x="-21" y="-11" width="9" height="22" rx="2" fill="#444"/><rect x="12" y="-11" width="9" height="22" rx="2" fill="#444"/></g>`;
@@ -1020,8 +1067,8 @@ function messSVG(kind,x){
   if(kind==='toy') return `<g transform="translate(${x} 198)" ${st}><rect x="-14" y="-18" width="18" height="18" rx="2" fill="#5bb6e8"/><text x="-5" y="-4" text-anchor="middle" font-family="Rubik,sans-serif" font-weight="700" font-size="12" fill="#fff" stroke="none">A</text><circle cx="12" cy="-6" r="6" fill="#e8584f"/></g>`;
   return `<g transform="translate(${x} 198) rotate(-12)" ${st}><path d="M-6 -26 h12 v16 h12 v10 h-24 z" fill="#fff"/><path d="M-6 -20 h12 M-6 -15 h12" stroke="#e8584f" stroke-width="3"/></g>`;
 }
-const WALL={dog:'#eef3dc',trainer:'#ffe6d2',office:'#e1ebf7',student:'#e3f3e6',cat:'#fbe9f1',zoomer:'#efe6fb',alpha:'#fff4c9'};
-const FLOOR={dog:'#cdd8a8',trainer:'#e9c3a3',office:'#c3cfdd',student:'#bcd9c2',cat:'#e9c6d6',zoomer:'#d6c6ee',alpha:'#f2d98a'};
+const WALL={hamster:'#fdf0d8',dog:'#eef3dc',trainer:'#ffe6d2',office:'#e1ebf7',student:'#e3f3e6',cat:'#fbe9f1',zoomer:'#efe6fb',alpha:'#fff4c9'};
+const FLOOR={hamster:'#e8cf9a',dog:'#cdd8a8',trainer:'#e9c3a3',office:'#c3cfdd',student:'#bcd9c2',cat:'#e9c6d6',zoomer:'#d6c6ee',alpha:'#f2d98a'};
 const WORLD=960, VIEW=320;
 function furnitureSVG(p){
   const st=`stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"`, wood='#c9915a', wood2='#a8733f';
@@ -1079,22 +1126,22 @@ function graveSVG(g){
 }
 
 /* ================= улица (секрет за шкафом) ================= */
-function relKind(p){ if(p.type==='cat') return p.stage==='adult'?'catmate':'owner'; if(p.type==='dog') return p.stage==='adult'?'dogmate':'dogowner'; if(p.type==='alpha') return 'parent'; if(p.stage==='adult') return isF(p)?'boy':'girl'; return isF(p)?'gfriend':'friend'; }
+function relKind(p){ if(p.type==='cat') return p.stage==='adult'?'catmate':'owner'; if(p.type==='dog') return p.stage==='adult'?'dogmate':'dogowner'; if(p.type==='hamster') return p.stage==='adult'?'hammate':'hamowner'; if(p.type==='alpha') return 'parent'; if(p.stage==='adult') return isF(p)?'boy':'girl'; return isF(p)?'gfriend':'friend'; }
 function rel(p){
   const k=relKind(p); p.rels=p.rels||{};
   let r=p.rels[k];
   if(!r||(r.left&&Date.now()-r.leftAt>DAY)){
-    const fem=k==='girl'||k==='gfriend'||((k==='catmate'||k==='dogmate')&&!isF(p))||(k==='parent'&&Math.random()<.5);
-    let breed=null; if(k==='catmate'||k==='dogmate'){ const sp=k==='catmate'?'cat':'dog'; p.mateHist=p.mateHist||[]; const cool=(p.soulCooldown||0)>0; if(cool) p.soulCooldown--;
+    const fem=k==='girl'||k==='gfriend'||(/mate$/.test(k)&&!isF(p))||(k==='parent'&&Math.random()<.5);
+    let breed=null; if(/mate$/.test(k)){ const sp={catmate:'cat',dogmate:'dog',hammate:'hamster'}[k]; p.mateHist=p.mateHist||[]; const cool=(p.soulCooldown||0)>0; if(cool) p.soulCooldown--;
       if(p.breed&&!cool&&Math.random()<.4){ breed=p.breed; } else { let pool=BREEDS[sp].filter(b=>b.id!==p.breed&&!p.mateHist.includes(b.id)); if(!pool.length){p.mateHist=[];pool=BREEDS[sp].filter(b=>b.id!==p.breed);} breed=pick(pool).id; p.mateHist.push(breed); } }
-    const mate=k==='catmate'||k==='dogmate', soul=mate&&breed===p.breed;
+    const mate=/mate$/.test(k), soul=mate&&breed===p.breed;
     const lost=soul&&(p.lostSouls||[]).filter(x=>x.breed===breed).pop(), back=!!(lost&&Math.random()<.35);
     r=p.rels[k]={kind:k,fem,breed,mate,soul,returned:back,greeted:false,tasksNeed:soul?1:3,tasksDone:0,couple:false,task:null,name:back?lost.name:null,love:mate?(soul?(back?65:75):30):50,met:false,wants:false,wantsAt:0,nextWant:Date.now()+rnd(3,6)*HOUR,left:false,flowersUntil:0};
   }
   return r;
 }
 const TASKS={morning:'Хочу гулять утром, с 7 до 11',gift:'',days2:'Не забывай меня: приходи два дня подряд',chase:'Хочу догонялки, когда ты в отличном настроении'};
-function taskText(p,r){ const t=r.task; if(!t) return ''; if(t.type==='gift') return p.type==='dog'?'Принеси палку, 3 раза за день':'Вылижи мне ушки, 3 раза за день'; return TASKS[t.type]; }
+function taskText(p,r){ const t=r.task; if(!t) return ''; if(t.type==='gift'&&p.type==='hamster') return 'Поделись семечкой, 3 раза за день'; if(t.type==='gift') return p.type==='dog'?'Принеси палку, 3 раза за день':'Вылижи мне ушки, 3 раза за день'; return TASKS[t.type]; }
 function newTask(p,r){ const types=['morning','gift','days2','chase'].filter(x=>!r.task||x!==r.task.type); r.task={type:pick(types),count:0,day:''}; }
 const dayKey=t=>new Date(t).toDateString();
 function taskDone(p,r){
@@ -1106,13 +1153,13 @@ function checkTask(p,r,a,happyBefore){
   if(!r.mate||r.couple||!r.task) return false; const t=r.task, now=Date.now(), h=new Date(now).getHours();
   if(t.type==='morning'&&a==='walk'&&h>=7&&h<11){ taskDone(p,r); return true; }
   if(t.type==='chase'&&a==='chase'&&happyBefore>=75){ taskDone(p,r); return true; }
-  const giftA=p.type==='dog'?'stick':'groom';
+  const giftA=p.type==='dog'?'stick':p.type==='hamster'?'share':'groom';
   if(t.type==='gift'&&a===giftA){ const d=dayKey(now); if(t.day!==d){t.day=d;t.count=0;} t.count++; if(t.count>=3){ taskDone(p,r); return true; } }
   return false;
 }
 function relAsk(r){
   return {girl:'Он встретил девушку. Как её зовут?',boy:'Она встретила парня. Как его зовут?',friend:'Тут новый друг. Как его зовут?',gfriend:'Тут новая подруга. Как её зовут?',
-    owner:'Во дворе хозяин. Как его зовут?',dogowner:'Во дворе хозяин с поводком. Как его зовут?',dogmate:r.fem?'Во дворе гуляет собака ('+breedOf('dog',r.breed).name+'). Как её зовут?':'Во дворе гуляет пёс ('+breedOf('dog',r.breed).name+'). Как его зовут?',parent:r.fem?'На лавочке мама. Как её зовут?':'На лавочке папа. Как его зовут?',catmate:r.fem?'Во дворе гуляет кошка ('+breedOf('cat',r.breed).name+'). Как её зовут?':'Во дворе гуляет кот ('+breedOf('cat',r.breed).name+'). Как его зовут?'}[r.kind];
+    owner:'Во дворе хозяин. Как его зовут?',dogowner:'Во дворе хозяин с поводком. Как его зовут?',hamowner:'Во дворе хозяин с переноской. Как его зовут?',hammate:(r.fem?'В траве шуршит хомячиха (':'В траве шуршит хомяк (')+breedOf('hamster',r.breed).name+'). '+(r.fem?'Как её зовут?':'Как его зовут?'),dogmate:r.fem?'Во дворе гуляет собака ('+breedOf('dog',r.breed).name+'). Как её зовут?':'Во дворе гуляет пёс ('+breedOf('dog',r.breed).name+'). Как его зовут?',parent:r.fem?'На лавочке мама. Как её зовут?':'На лавочке папа. Как его зовут?',catmate:r.fem?'Во дворе гуляет кошка ('+breedOf('cat',r.breed).name+'). Как её зовут?':'Во дворе гуляет кот ('+breedOf('cat',r.breed).name+'). Как его зовут?'}[r.kind];
 }
 const romance=r=>r.kind==='girl'||r.kind==='boy';
 function relStep(p,t){
@@ -1151,7 +1198,7 @@ function nameRel(p,name){
   const r=rel(p); r.name=name; r.met=true; if(r.mate){ newTask(p,r); r.lastVisitDay=dayKey(Date.now()); } r.nextWant=Date.now()+rnd(3,6)*HOUR;
   const P=r.fem?'Она':'Он';
   p.msg={girl:'Знакомьтесь: '+name+'. Кажется, она ему нравится.',boy:'Знакомьтесь: '+name+'. Кажется, он ей нравится.',friend:name+' теперь друг. Можно дать пять!',gfriend:name+' теперь подруга. Можно дать пять!',
-    owner:'Хозяин '+name+' гладит кота по голове.',parent:(r.fem?'Мама ':'Папа ')+name+' машет рукой.',catmate:name+' осторожно подходит и нюхает нос.',dogowner:'Хозяин '+name+' треплет по холке.',dogmate:name+' виляет хвостом и обнюхивается.'}[r.kind];
+    owner:'Хозяин '+name+' гладит кота по голове.',parent:(r.fem?'Мама ':'Папа ')+name+' машет рукой.',catmate:name+' осторожно подходит и нюхает нос.',dogowner:'Хозяин '+name+' треплет по холке.',dogmate:name+' виляет хвостом и обнюхивается.',hamowner:'Хозяин '+name+' сажает хомяка на ладошку.',hammate:name+' смешно шевелит носом.'}[r.kind];
   if(r.soul) p.msg=name+': та же порода! Они как будто знакомы сто лет.';
   p.msgRaw=true; sfx('happy');
 }
@@ -1160,6 +1207,8 @@ const FRI=[['five','Дать пять','привет'],['ball','Мяч','пои�
 const REL_ACTS={girl:ROM,boy:ROM,friend:FRI,gfriend:FRI,
   owner:[['rub','Потереться','мурр'],['purr','Мурлыкать','на руках'],['mouse','Принести мышь','подарок'],['walk','Гулять','рядом']],
   parent:[['hug','Обнять','родного'],['swing','Качели','выше!'],['icecream','Мороженое','вместе'],['walk','Гулять','за руку']],
+  hamowner:[['palm','На ладошку','тепло'],['seeds','Семечка','угоститься'],['run','Шарик','побегать'],['walk','Гулять','на плече']],
+  hammate:[['sniff','Обнюхаться','знакомство'],['chase','Догонялки','по траве'],['share','Поделиться','семечкой'],['walk','Гулять','вдвоём']],
   dogowner:[['paw','Дать лапу','умница'],['fetch','Апорт','принеси'],['belly','Пузико','почесать'],['walk','Гулять','на поводке']],
   dogmate:[['sniff','Обнюхаться','знакомство'],['chase','Догонялки','по двору'],['stick','Палка','поделиться'],['walk','Гулять','по парку']],
   catmate:[['rub','Потереться','мурр'],['chase','Догонялки','по двору'],['groom','Вылизать','забота'],['walk','Гулять','по крышам']]};
@@ -1172,6 +1221,7 @@ function relSay(a,r){
     rub:r.kind==='owner'?['Мррр… Хозяин доволен.','Трётся о ноги и мурчит.']:['Потёрлись носами. Мррр.','Трутся щеками и мурчат.'],
     purr:['Хозяин взял на руки. Мурчит.','Тепло и уютно.'],mouse:['Принёс игрушечную мышь. Хозяин в восторге.','Хозяин: «Ну ты добытчик!»'],
     swing:['Выше! Ещё выше!','Качели скрипят, все смеются.'],icecream:['Поделили мороженое.','Пломбир на двоих.'],
+    palm:['Сидит на тёплой ладошке и умывается.','Хозяин гладит его одним пальцем.'],seeds:['Семечка! Сразу за щёку.','Хозяин смеётся: щёки как шарики.'],run:['Носится в прогулочном шаре по двору.','Шарик катится, хомяк счастлив.'],share:['Поделился семечкой. Это любовь.','Положил семечку прямо перед носом.'],
     paw:['Дал лапу. Хозяин: «Умница!»','Лапа, вторая лапа. Хозяин смеётся.'],fetch:['Принёс мяч и ждёт ещё.','Апорт! Хозяин хлопает в ладоши.'],belly:['Перевернулся на спину. Пузико почёсано.','Дрыгает лапой от удовольствия.'],
     sniff:['Обнюхались. Знакомство состоялось.','Хвосты виляют одновременно.'],stick:['Нашли одну палку на двоих.','Тянут палку в разные стороны.'],
     chase:['Носятся по двору друг за другом.','Догнал'+(r.fem?'и':'')+'! Теперь водишь ты.'],groom:['Вылизывают друг другу ушки.','Мурлыкают в унисон.']};
@@ -1197,9 +1247,10 @@ function npcSVG(r,happy){
   let g='';
   const hy=-100, hr=31;
   if(r.kind==='catmate') return cat('adult','x',happy?'happy':'normal',0,{fem:r.fem,breed:breedOf('cat',r.breed)});
+  if(r.kind==='hammate') return hamster('adult','x',happy?'happy':'normal',0,{fem:r.fem,breed:breedOf('hamster',r.breed)});
   if(r.kind==='dogmate') return dog('adult','x',happy?'happy':'normal',0,{fem:r.fem,breed:breedOf('dog',r.breed)});
   const look={girl:{hair:'#7a3e1f',top:'#f29ac8',dress:true,long:true},boy:{hair:'#3a2c22',top:'#5b8def'},friend:{hair:'#2f2a24',top:'#5bb6e8',cap:true},gfriend:{hair:'#e8c46a',top:'#f2c14e',pony:true},
-              owner:{hair:'#5a4636',top:'#7bbf8a',beard:true},dogowner:{hair:'#3a2c22',top:'#e8a25a',cap:true},parent:r.fem?{hair:'#8a5a2b',top:'#c8a0e8',dress:true,bun:true}:{hair:'#4a3a2c',top:'#6aa6d8',beard:true}}[r.kind];
+              owner:{hair:'#5a4636',top:'#7bbf8a',beard:true},dogowner:{hair:'#3a2c22',top:'#e8a25a',cap:true},hamowner:{hair:'#c98b4a',top:'#f29ac8'},parent:r.fem?{hair:'#8a5a2b',top:'#c8a0e8',dress:true,bun:true}:{hair:'#4a3a2c',top:'#6aa6d8',beard:true}}[r.kind];
   if(look.long) g+=`<path d="M-30 ${hy-4} Q-36 ${hy+40} -24 ${hy+48} L24 ${hy+48} Q36 ${hy+40} 30 ${hy-4} Z" fill="${look.hair}" ${st}/>`;
   g+=`<rect x="-14" y="-28" width="9" height="26" rx="4" fill="${look.dress?skin:'#3b4a6b'}" ${st}/><rect x="5" y="-28" width="9" height="26" rx="4" fill="${look.dress?skin:'#3b4a6b'}" ${st}/>`;
   g+=`<ellipse cx="-10" cy="-2" rx="9" ry="4.5" fill="${OUT}"/><ellipse cx="10" cy="-2" rx="9" ry="4.5" fill="${OUT}"/>`;
@@ -1400,7 +1451,7 @@ function render(){
       document.querySelectorAll('.sexbtn').forEach(b=>b.onclick=()=>{chosenSex=b.dataset.sex;box.dataset.sex='';render();});
     }
     if(box.dataset.sex!==chosenSex){ box.innerHTML=''; ORDER.forEach(k=>{const b=document.createElement('button');b.className='pick';b.dataset.k=k;b.insertAdjacentHTML('beforeend',previewSVG(k,chosenSex));const t=document.createElement('b');t.textContent=titleOf(k,chosenSex);b.appendChild(t);b.onclick=()=>{chosen=k;render();};box.appendChild(b);}); box.dataset.sex=chosenSex; }
-    document.querySelectorAll('.sexbtn').forEach(b=>{ b.textContent=chosen==='cat'?(b.dataset.sex==='m'?'Кот':'Кошка'):chosen==='dog'?(b.dataset.sex==='m'?'Пёс':'Собака'):(b.dataset.sex==='m'?'Он':'Она'); b.setAttribute('aria-pressed',b.dataset.sex===chosenSex); });
+    document.querySelectorAll('.sexbtn').forEach(b=>{ b.textContent=chosen==='cat'?(b.dataset.sex==='m'?'Кот':'Кошка'):chosen==='dog'?(b.dataset.sex==='m'?'Пёс':'Собака'):chosen==='hamster'?(b.dataset.sex==='m'?'Хомяк':'Хомячиха'):(b.dataset.sex==='m'?'Он':'Она'); b.setAttribute('aria-pressed',b.dataset.sex===chosenSex); });
     $('nameLbl').textContent=chosenSex==='f'?'Как её зовут?':'Как его зовут?';
     $('petName').placeholder=chosenSex==='f'?'Например, Галя':'Например, Гена';
     box.querySelectorAll('.pick').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===chosen));
@@ -1419,7 +1470,7 @@ $('startBtn').onclick=()=>{
     stats:{hunger:50,happy:50,disc:0,health:100},extra:0,wv:3,poop:0,sick:false,doses:0,light:true,asleep:false,
     sleptAt:0,lightPenalized:false,call:null,nextPoop:now+6*MIN,nextCall:now+4*MIN,mistakes:0,z_hunger:null,z_happy:null,
     msg:chosenSex==='f'?'Привет! Я маленькая и голодная. Покорми меня.':'Привет! Я маленький и голодный. Покорми меня.'};
-  if(S.pet.breed) S.pet.msg=(chosen==='dog'?'Тебе достался щенок: ':'Тебе достался котёнок: ')+breedOf(chosen,S.pet.breed).name+'. '+S.pet.msg;
+  if(S.pet.breed) S.pet.msg=(chosen==='dog'?'Тебе достался щенок: ':chosen==='hamster'?'Тебе достался хомячонок: ':'Тебе достался котёнок: ')+breedOf(chosen,S.pet.breed).name+'. '+S.pet.msg;
   $('petName').value=''; view='main';
   save(); render();
 };
