@@ -299,7 +299,7 @@ const FEMW=[['он','она'],['Он','Она'],['его','её'],['Его','Е�
  ['проголодался','проголодалась'],['заскучал','заскучала'],['накакал','накакала'],['намусорил','намусорила'],['Отвернулся','Отвернулась'],['отвернулся','отвернулась'],['Обиделся','Обиделась'],['обиделся','обиделась'],
  ['Выздоровел','Выздоровела'],['Перестал','Перестала'],['Стал','Стала'],['стал','стала'],['Устал','Устала'],['устал','устала'],['вылез','вылезла'],['наелся','наелась'],['заболел','заболела'],['Переел','Переела'],['переел','переела'],
  ['спрятался','спряталась'],['Вышел','Вышла'],['вышел','вышла'],['Вернулся','Вернулась'],['похудел','похудела'],['доволен','довольна'],['Принёс','Принесла'],['принёс','принесла'],['Уснул','Уснула'],['спал','спала'],
- ['Прожил','Прожила'],['один','одна'],['прожил','прожила'],['Дожил','Дожила'],['Умер','Умерла'],['умер','умерла'],['был','была'],['Разбудили. Ворчит','Разбудили. Ворчит'],['маленький','маленькая'],['голодный','голодная'],['Нашёл! Он','Нашла! Она'],['Нашёл!','Нашла!']];
+ ['Прожил','Прожила'],['Отпущен','Отпущена'],['отпущен','отпущена'],['один','одна'],['прожил','прожила'],['Дожил','Дожила'],['Умер','Умерла'],['умер','умерла'],['был','была'],['Разбудили. Ворчит','Разбудили. Ворчит'],['маленький','маленькая'],['голодный','голодная'],['Нашёл! Он','Нашла! Она'],['Нашёл!','Нашла!']];
 function fem(t,sex){ if(sex!=='f'||!t) return t; let r=String(t); FEMW.forEach(([m,f])=>{ r=r.replace(new RegExp('(^|[^А-Яа-яЁё])'+m+'(?=[^А-Яа-яЁё]|$)','g'),'$1'+f); }); return r; }
 const CAT_NORM={baby:1,teen:2.5,adult:4}, DOG_NORM={baby:3,teen:7,adult:12}, HAM_NORM={baby:20,teen:80,adult:150};
 /* скорость в единицах из 100 в час */
@@ -453,7 +453,28 @@ function simulate(){
   }
 }
 /* ---- прогноз и напоминания в Телеграме ---- */
-const SYNC_URL='https://beregi-bot.shawnwild.workers.dev/sync';
+const API_URL='https://beregi-bot.shawnwild.workers.dev', SYNC_URL=API_URL+'/sync';
+async function api(path){ const init=tgInit(); if(!init) return null; try{ const r=await fetch(API_URL+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:init})}); return await r.json(); }catch(e){ return null; } }
+async function claim(){
+  const r=await api('/claim'); if(!r) return;
+  if(r.coins>0){ S.coins=(S.coins||0)+r.coins; coinToast='+'+r.coins+' '+coinWord(r.coins)+': покупка'; coinToastAt=Date.now(); sfx('happy'); }
+  if(r.swap>0&&S.pet){ release(); }
+  if(r.coins>0||r.swap>0){ save(); render(); }
+}
+function release(){
+  const p=S.pet, t=Date.now(); mg=null; view='main';
+  const g={name:p.name,type:p.type,lived:t-p.born,cause:'отпущен',died:t,title:stageName(p),sex:p.sex};
+  S.graves.unshift(g); S.graves=S.graves.slice(0,30); S.lastDead=g; S.pet=null; save();
+}
+function buyCoins(){
+  const T=window.Telegram&&Telegram.WebApp;
+  if(!tgInit()||!T||!T.openInvoice){ styleNote='Купить монеты можно в игре внутри Телеграма: 100 монет за 50 звёзд.'; render(); return; }
+  styleNote='Открываю оплату…'; render();
+  api('/invoice').then(r=>{
+    if(!r||!r.link){ styleNote='Не получилось открыть оплату. Попробуй ещё раз через минуту.'; render(); return; }
+    T.openInvoice(r.link,st=>{ if(st==='paid'){ styleNote='Оплачено! Монеты уже начисляются.'; setTimeout(claim,1500); setTimeout(claim,5000); } else { styleNote=st==='cancelled'?'Покупка отменена.':'Оплата не прошла.'; } render(); });
+  });
+}
 let FORECAST=false;
 const VOICE=[
   ['голодает!',['Я очень голодный. Мне правда плохо 😢','Если ты не придёшь, я не знаю, что будет…','Я уже еле дышу от голода. Где ты?']],
@@ -548,7 +569,7 @@ function renderStyle(p){
     <div class="note">${styleNote||'Примерка бесплатная. Платишь, только когда нажимаешь «Применить».'}</div>`;
   $('styleView').querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{styleTab=b.dataset.tab;styleSel=null;styleNote='';sfx('click');render();});
   $('styleView').querySelectorAll('[data-opt]').forEach(b=>b.onclick=()=>{styleSel=b.dataset.opt;styleNote='';sfx('click');render();});
-  $('topup').onclick=()=>{styleNote='Покупка монет появится в версии для Телеграма: 100 монет за символическую сумму. А пока монеты дают за заботу: заходи каждый день, расти его, исполняй желания.';sfx('click');render();};
+  $('topup').onclick=()=>{sfx('click');buyCoins();};
 }
 function act(a){
   simulate(); const p=S.pet; if(!p){render();return;} p.msgRaw=false;
@@ -1497,7 +1518,7 @@ function render(){
     if(lastDeadShown!==g.died){ if(lastDeadShown!==null||Date.now()-g.died<10*MIN) sfx('death'); lastDeadShown=g.died; }
     $('graveScene').innerHTML=graveSVG(g);
     $('epitaph').innerHTML=`<b>${esc(g.name)}</b><br>${esc(g.title||CH[g.type].title)}<br>${fem('Прожил',g.sex)} ${dur(g.lived)}<br>`+
-      (g.cause==='старости'?fem('Дожил',g.sex)+' до старости. Ты был хорошим хозяином.':fem('Умер',g.sex)+' от '+g.cause+'.<br>'+fem('Его',g.sex)+' больше не вернуть.');
+      (g.cause==='отпущен'?fem('Отпущен',g.sex)+'. Ты сам решил расстаться.':g.cause==='старости'?fem('Дожил',g.sex)+' до старости. Ты был хорошим хозяином.':fem('Умер',g.sex)+' от '+g.cause+'.<br>'+fem('Его',g.sex)+' больше не вернуть.');
   } else {
     const box=$('picks');
     if(!box.dataset.built){
@@ -1512,7 +1533,7 @@ function render(){
   }
   $('memorial').hidden=!S.graves.length;
   $('record').innerHTML='Рекорд жизни: <b>'+dur(S.best)+'</b>';
-  $('graves').innerHTML=S.graves.slice(0,10).map(g=>`<li><span>${esc(g.name)}, ${esc((g.title||CH[g.type].title).toLowerCase())}</span><span>${dur(g.lived)}, ${g.cause==='старости'?'от старости':'от '+g.cause}</span></li>`).join('');
+  $('graves').innerHTML=S.graves.slice(0,10).map(g=>`<li><span>${esc(g.name)}, ${esc((g.title||CH[g.type].title).toLowerCase())}</span><span>${dur(g.lived)}, ${g.cause==='отпущен'?fem('отпущен',g.sex):g.cause==='старости'?'от старости':'от '+g.cause}</span></li>`).join('');
 }
 
 $('startBtn').onclick=()=>{
@@ -1536,6 +1557,8 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) render()
 window.addEventListener('pagehide',()=>syncNow(true));
 setInterval(()=>{ if(!document.hidden) syncNow(false); },120000);
 setTimeout(()=>syncNow(false),1500);
+setTimeout(claim,800);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) claim(); });
 })();
 </script>
 
