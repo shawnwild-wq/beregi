@@ -335,7 +335,7 @@ function dailyCoins(){
   earnFree(S.streak%7===0?5:1, S.streak%7===0?'неделя подряд без пропусков!':'зашёл сегодня'); save();
 }
 function migrateLook(p){ if(!p||!p.look) return; const L=p.look; if(L.outfit){ L.top=L.outfit; delete L.outfit; } if(L.acc){ const m={collar:'neck',bandana:'neck',bow:'hat',partyhat:'hat',glasses:'glasses'}[L.acc]; if(m) L[m]=L.acc==='glasses'?'sun':L.acc; delete L.acc; } }
-function migrate(){ migrateLook(S.pet); if(!S.coinsInit){ S.coins=(S.coins||0)+START_COINS; S.coinsInit=true; } const p0=S.pet; if(p0&&!CH[p0.type].human&&!p0.breed) p0.breed=BREEDS[p0.type][0].id; if(p0&&p0.messX&&p0.wv!==3){ p0.messX=p0.messX.map(x=>x+320); p0.wv=3; }
+function migrate(){ migrateLook(S.pet); if(!S.ownInit){ S.ownInit=true; S.owned=S.owned||[]; const L=(S.pet&&S.pet.look)||{}; Object.keys(L).forEach(k=>{ if(L[k]&&L[k]!=='default'&&!S.owned.includes(k+':'+L[k])) S.owned.push(k+':'+L[k]); }); } if(!S.coinsInit){ S.coins=(S.coins||0)+START_COINS; S.coinsInit=true; } const p0=S.pet; if(p0&&!CH[p0.type].human&&!p0.breed) p0.breed=BREEDS[p0.type][0].id; if(p0&&p0.messX&&p0.wv!==3){ p0.messX=p0.messX.map(x=>x+320); p0.wv=3; }
   const p=S.pet; if(p&&p.poop&&!(p.messX&&p.messX.length>=p.poop)){ p.messX=[]; for(let i=0;i<p.poop;i++) p.messX.push(Math.round(rnd(24,616))); } if(p&&p.wv!==2&&p.wv!==3){ p.extra=Math.max(0,(p.extra||0)*.3); p.wv=3; } }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} if(!FORECAST) scheduleSync();}
 
@@ -509,7 +509,7 @@ function forecast(fromNow){
   try{
     for(let t=p.lastTick+MIN;t<=end&&notes.length<25;t+=MIN){
       p.lastTick=t; const cause=stepSeeded(p,t);
-      if(cause){ notes.push({at:t,text:fem(nm+' умер от '+cause+'. Его больше не вернуть.',sx)}); break; }
+      if(cause){ notes.push({at:t,text:fem(nm+' умер от '+cause+'. Его больше не вернуть.',sx),third:true}); break; }
       if(prevSleep&&!p.asleep&&p.stage==='baby'&&isNight(t-MIN)) notes.push({at:t,text:fem('Доброе утро! Я проснулся, давай знакомиться 🥺',sx)});
       prevSleep=!!p.asleep;
       if(p.type==='lifter'){
@@ -526,7 +526,8 @@ function forecast(fromNow){
       prev=p.asleep?new Set([...prev,...cur]):new Set(cur);
     }
   } finally { FORECAST=false; }
-  return notes.filter(n=>n.at>=fromNow);
+  const EMO={cat:'🐱',dog:'🐶',hamster:'🐹',lifter:'🏋️',trainer:'💪',office:'💼',student:'🎓',zoomer:'📱',alpha:'🧒'}[p0.type]||'';
+  return notes.filter(n=>n.at>=fromNow).map(n=>n.third?{at:n.at,text:n.text}:{at:n.at,text:n.text,who:(EMO+' '+nm).trim()});
 }
 window.__beregiForecast=forecast;
 let syncTimer=null;
@@ -534,7 +535,7 @@ function tgInit(){ try{ return (window.Telegram&&Telegram.WebApp&&Telegram.WebAp
 function syncNow(hidden){
   const init=tgInit(); if(!init) return;
   let notes=[]; try{ notes=forecast(Date.now()+(hidden?0:150000)); }catch(e){}
-  try{ fetch(SYNC_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:init,notes}),keepalive:true}).catch(()=>{}); }catch(e){}
+  try{ fetch(SYNC_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:init,notes,pet:S.pet?{type:S.pet.type,stage:S.pet.stage,alive:true}:{alive:false}}),keepalive:true}).catch(()=>{}); }catch(e){}
 }
 function scheduleSync(){ clearTimeout(syncTimer); syncTimer=setTimeout(()=>syncNow(document.hidden),2500); }
 function die(cause,t){
@@ -582,8 +583,8 @@ function renderStyle(p){
   $('styleView').innerHTML=`<div class="bal"><span class="coin"><i></i>${S.coins||0} ${coinWord(S.coins||0)}${HW?' · 🎃 '+(S.pumpkins||0):''}</span><button class="topup" id="topup" type="button">Пополнить</button></div>
     <div class="tabs">${styleTabs(p).map(([k,t])=>`<button type="button" data-tab="${k}" aria-pressed="${k===styleTab}">${t}</button>`).join('')}</div>
     <div class="pv"><svg viewBox="${vb}" aria-label="Примерка">${charSVG(p.type,p.stage,p.stage==='teen'?p.teenForm:p.form,m,fatLevel(p),p.sex,p.breed,look)}</svg></div>
-    <div class="opts">${styleOpts(p,styleTab).map(([k,t])=>`<button type="button" data-opt="${k}" aria-pressed="${k===styleSel}">${t}<small>${HW?(()=>{const [a,b]=k.split(':'), it=hwItems(p).find(x=>x[0]===a&&x[1]===b); return (p.look||{})[a]===b?'сейчас':owns(a,b)?'твоё':it[3]+' 🎃';})():k===((p.look||{})[styleTab]||'default')?'сейчас':PRICE[styleTab]+' мон.'}</small></button>`).join('')}</div>
-    <div class="note">${styleNote||(HW?'Костюмы за тыквы 🎃 продаются только до 1 ноября, а купленные остаются навсегда. Не хватает тыкв — можно за монеты: 1 тыква = 2 монеты.':'Примерка бесплатная. Платишь, только когда нажимаешь «Применить».')}</div>`;
+    <div class="opts">${styleOpts(p,styleTab).map(([k,t])=>`<button type="button" data-opt="${k}" aria-pressed="${k===styleSel}">${t}<small>${HW?(()=>{const [a,b]=k.split(':'), it=hwItems(p).find(x=>x[0]===a&&x[1]===b); return (p.look||{})[a]===b?'сейчас':owns(a,b)?'твоё':it[3]+' 🎃';})():k===((p.look||{})[styleTab]||'default')?'сейчас':k==='default'||owns(styleTab,k)?'твоё':PRICE[styleTab]+' мон.'}</small></button>`).join('')}</div>
+    <div class="note">${styleNote||(HW?'Костюмы за тыквы 🎃 продаются только до 1 ноября, а купленные остаются навсегда. Не хватает тыкв — можно за монеты: 1 тыква = 2 монеты.':'Примерка бесплатная. Купленная вещь остаётся у тебя навсегда, даже у следующих питомцев, и переодевать её бесплатно.')}</div>`;
   $('styleView').querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{styleTab=b.dataset.tab;styleSel=null;styleNote='';sfx('click');render();});
   $('styleView').querySelectorAll('[data-opt]').forEach(b=>b.onclick=()=>{styleSel=b.dataset.opt;styleNote='';sfx('click');render();});
   $('topup').onclick=()=>{sfx('click');buyCoins();};
@@ -595,8 +596,10 @@ function act(a){
     const pr=it[3]; if(!owns(sl,k)){ if((S.pumpkins||0)>=pr) S.pumpkins-=pr; else if((S.coins||0)>=pr*2) S.coins-=pr*2; else { styleNote='Не хватает: нужно '+pr+' 🎃 (у тебя '+(S.pumpkins||0)+') или '+pr*2+' монет.'; sfx('no'); render(); return; }
       S.owned=(S.owned||[]).concat([sl+':'+k]); styleNote='Куплено: '+it[2]+'! Теперь это твоё навсегда.'; } else styleNote='Надето!';
     p.look=Object.assign({},p.look||{},{[sl]:k}); p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; save(); render(); return; }
-  if(a==='applyStyle'){ const pr=PRICE[styleTab]; if((S.coins||0)<pr){ styleNote='Не хватает монет: нужно '+pr+', у тебя '+(S.coins||0)+'.'; sfx('no'); render(); return; }
-    S.coins-=pr; p.look=Object.assign({},p.look||{},{[styleTab]:styleSel}); styleNote='Готово! Списано '+pr+' '+coinWord(pr)+'.'; p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; save(); render(); return; }
+  if(a==='applyStyle'){ const pr=PRICE[styleTab], free=styleSel==='default'||owns(styleTab,styleSel);
+    if(!free&&(S.coins||0)<pr){ styleNote='Не хватает монет: нужно '+pr+', у тебя '+(S.coins||0)+'.'; sfx('no'); render(); return; }
+    if(!free){ S.coins-=pr; S.owned=(S.owned||[]).concat([styleTab+':'+styleSel]); }
+    p.look=Object.assign({},p.look||{},{[styleTab]:styleSel}); styleNote=free?'Надето! Это уже твоё, бесплатно.':'Куплено навсегда! Списано '+pr+' '+coinWord(pr)+'. Теперь переодевать бесплатно.'; p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; save(); render(); return; }
   const s=p.stats, c=CH[p.type];
   const prevMsg=p.msg, prevHunger=s.hunger, prevDisc=s.disc;
   if(!['meal','snack','scold','play'].includes(a)) sfx('click');
@@ -1608,8 +1611,9 @@ function render(){
     }
     else if(view==='style'){
       let pr=PRICE[styleTab]||0, cur=(p.look||{})[styleTab]||'default', same=styleSel===cur, lab=pr+' '+coinWord(pr);
+      if(styleTab!=='hw'&&(styleSel==='default'||owns(styleTab,styleSel))) lab='бесплатно, уже твоё';
       if(styleTab==='hw'&&styleSel){ const [a,b]=styleSel.split(':'), it=hwItems(p).find(x=>x[0]===a&&x[1]===b); same=(p.look||{})[a]===b; pr=it?it[3]:0; lab=owns(a,b)?'бесплатно, уже твоё':(S.pumpkins||0)>=pr?pr+' 🎃':pr*2+' монет (тыкв мало)'; }
-      html=`<button class="btn" data-a="applyStyle" style="grid-column:span 2" ${same?'disabled':''}>${styleTab==='hw'&&styleSel&&!same&&!owns(...styleSel.split(':'))?'Купить':'Применить'}<small>${same?'уже надето':lab}</small></button><button class="btn" data-a="back">Назад</button>`;
+      html=`<button class="btn" data-a="applyStyle" style="grid-column:span 2" ${same?'disabled':''}>${styleTab==='hw'?(styleSel&&!same&&!owns(...styleSel.split(':'))?'Купить':'Надеть'):(styleSel==='default'||owns(styleTab,styleSel)?'Надеть':'Купить')}<small>${same?'уже надето':lab}</small></button><button class="btn" data-a="back">Назад</button>`;
     }
     else if(view==='tot'){
       html=`<button class="btn" data-a="totYes" style="grid-column:span 2">Дать конфеты 🍬<small>сладость</small></button><button class="btn" data-a="totNo">Не открывать<small>гадость</small></button>`;
