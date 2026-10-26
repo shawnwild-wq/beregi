@@ -301,7 +301,7 @@ CH.strongman={title:'Стронгмен',titleF:'Стронгвумен',human:t
     names:{baby:'Малыш-силач',teen:'Подающий надежды',teenBad:'Ленивый богатырь',good:'Самый сильный человек',bad:'Добрый великан'},
     namesF:{baby:'Малышка-силачка',teen:'Подающая надежды',teenBad:'Ленивая богатырша',good:'Самая сильная женщина',bad:'Добрая великанша'},
     food:{baby:['Каша','Пончик'],big:['Стейк','Торт']},
-    game:'Камни',clean:'Убрать камни',mess:'plates',
+    game:'Камни',clean:'Убрать камни',mess:'stones',
     calls:['Хочет поднять камень побольше','Ищет, что бы ещё сдвинуть','Требует тарелку мяса','Опять порвал футболку'],
     eat:['Мясо! Сила растёт.','Ещё порцию. Это для дела.','Три тарелки — разминка.'],
     treat:['Торт целиком. Это читмил.','Ещё кусочек, ему можно.'],
@@ -310,7 +310,7 @@ CH.thai={title:'Тайский боец',titleF:'Тайская боксёрша
     names:{baby:'Малыш-драчун',teen:'Ученик',teenBad:'Задира',good:'Чемпион стадиона',bad:'Вечный спарринг-партнёр'},
     namesF:{baby:'Малышка-драчунья',teen:'Ученица',teenBad:'Задира',good:'Чемпионка стадиона',bad:'Вечная спарринг-партнёрша'},
     food:{baby:['Рисовая каша','Банан'],big:['Рис с курицей','Манго с рисом']},
-    game:'Комбинация',clean:'Смотать бинты',mess:'sock',
+    game:'Комбинация',clean:'Смотать бинты',mess:'wraps',
     calls:['Бинты размотались','Хочет бить грушу в 6 утра','Спорит, что лоу-кик лучше джеба','Требует новые перчатки'],
     eat:['Рис и курица — еда чемпионов.','Сил прибавилось.'],
     treat:['Манго! Сладкое, как победа.','Ещё кусочек манго.'],
@@ -402,6 +402,46 @@ function todayDM(){ const d=new Date(); return String(d.getDate()).padStart(2,'0
 function bdayCheck(){ if(!S.bday||S.bday!==todayDM()) return; const y=new Date().getFullYear(); if(S.bdGift===y||bdayCheck.busy) return; bdayCheck.busy=true;
   const give=()=>{ S.bdGift=y; S.owned=(S.owned||[]).concat(['hat:bday'+y]); S.bdNote=y; coinToast='🎁 Подарок на день рождения в «стиле» → Шапки'; coinToastAt=Date.now(); sfx('evo'); save(); render(); };
   if(tgInit()) api('/bdgift').then(r=>{ bdayCheck.busy=false; if(r&&r.gift) give(); else if(r&&!r.error) S.bdGift=y; }); else { bdayCheck.busy=false; give(); } }
+const EVENTS={
+  strongman:{name:'Турнир силачей',btn:'🏆 Выйти на турнир силачей',icon:'🏆',prize:'Кубок турнира силачей',rules:'Пять дисциплин подряд. Жми «Поднять!», когда метка в зоне. Метка быстрее, чем на тренировке.',deck:['Атласный камень','Тяга машины','Прогулка фермера','Подъём бревна','Удержание кувшинов'],speed:1250},
+  thai:{name:'Бой на стадионе',btn:'🥊 Выйти на ринг',icon:'🥋',prize:'Пояс чемпиона стадиона',rules:'Пять раундов. В каждом запомни и повтори комбинацию — длиннее, чем на тренировке.',seq:[4,4,5,5,6]},
+  trainer:{name:'Марафон',btn:'🏃 Бежать марафон',icon:'🏅',prize:'Медаль финишёра марафона',rules:'Держи темп: жми, когда метка в зоне. Голодным лучше не стартовать.',deck:['5 км','10 км','21 км','30 км','42 км'],speed:1250,fed:true},
+  office:{name:'Квартальный отчёт',btn:'📊 Сдать квартальный отчёт',icon:'💰',prize:'Премия за квартал',rules:'Десять писем. Разбери, что важно, а что спам.',n:10},
+  student:{name:'Сессия',btn:'📚 Сдавать сессию',icon:'🎓',prize:'Сессия',rules:'Десять вопросов. От ответов зависит оценка.',n:10,grade:true},
+  zoomer:{name:'Вирусный ролик',btn:'📱 Снимать вирусный ролик',icon:'📈',prize:'Значок «Миллион просмотров»',rules:'Восемь попыток угадать, что залетит. От этого зависят просмотры.',n:8},
+  alpha:{name:'Школьная олимпиада',btn:'🏫 Идти на олимпиаду',icon:'📜',prize:'Грамота олимпиады',rules:'Восемь вопросов. Отвечай правильно — получишь грамоту.',n:8},
+  cat:{name:'Выставка кошек',btn:'🎀 Идти на выставку',icon:'🎀',prize:'Розетка выставки кошек',judge:true},
+  dog:{name:'Аджилити',btn:'🐕 На полосу препятствий',icon:'🏆',prize:'Кубок аджилити',rules:'Пять препятствий. Прыгай, когда метка в зоне.',deck:['Барьер','Тоннель','Слалом','Бум','Шина'],speed:1250},
+  hamster:{name:'Хомячьи бега',btn:'🐹 На хомячьи бега',icon:'🏅',prize:'Медаль хомячьих бегов',rules:'Пять кругов против трёх соперников. Жми «Крути!», когда метка в зоне.',deck:['Круг 1','Круг 2','Круг 3','Круг 4','Финиш'],speed:1200}};
+const KIDQ=[['Сколько будет 2 + 3?','5','6'],['Какого цвета небо днём?','Голубое','Зелёное'],['Сколько лап у кошки?','4','6'],['Кто говорит «му»?','Корова','Собака'],['Сколько дней в неделе?','7','5'],['Что растёт на ёлке?','Шишки','Яблоки'],['Какое время года после зимы?','Весна','Осень'],['Сколько будет 10 − 4?','6','5'],['Какой фрукт жёлтый и длинный?','Банан','Слива'],['Где живёт рыба?','В воде','На дереве'],['Сколько ног у паука?','8','6'],['Какая буква первая в алфавите?','А','Б']];
+function trophy(i,t,name){ S.trophies=(S.trophies||[]).concat([{i,t,n:name,d:Date.now()}]); }
+function startEvent(p){ const R=RL(p), E=EVENTS[R]; if(!E||!p.evOpen) return;
+  if(E.judge){ judgeShow(p); return; }
+  if(E.fed&&p.stats.hunger<30){ p.evOpen=null; p.stats.happy=clamp(p.stats.happy-15); p.msg='Вышел на старт голодным и сошёл с дистанции на 5-м километре 😓 Перед стартом надо поесть.'; return; }
+  startGame(p); mg.ev=R; mg.evName=E.name;
+  if(E.deck){ mg.deck=E.deck.slice(); mg.total=E.deck.length; }
+  if(E.speed) mg.evSpeed=E.speed;
+  if(R==='dog'){ mg.type='trainer'; }
+  if(E.seq){ const K=['Джеб','Лоу-кик','Колено','Локоть']; mg.deck=E.seq.map(n=>Array.from({length:n},()=>pick(K))); mg.total=E.seq.length; }
+  if(R==='office'){ const imp=shuffle(MAILS.filter(m=>m[1])), sp=shuffle(MAILS.filter(m=>!m[1])); mg.deck=shuffle(imp.slice(0,5).concat(sp.slice(0,5))); mg.total=10; }
+  if(R==='student'){ mg.deck=shuffle(QUIZ).slice(0,10); mg.total=10; }
+  if(R==='alpha'){ mg.type='student'; mg.deck=shuffle(KIDQ).slice(0,8); mg.total=8; }
+  if(R==='zoomer'){ mg.deck=shuffle(TRENDS); mg.total=8; }
+  renderMG(); }
+function judgeShow(p){ const s=p.stats; let pts=0; const why=[];
+  if(!p.poop) pts++; else why.push('шерсть пахнет лотком'); if(fatLevel(p)<=1) pts++; else why.push('лишний вес'); if(s.happy>=60) pts++; else why.push('грустный вид');
+  if(s.health>=80) pts++; else why.push('вялый'); if(s.disc>=50) pts++; else why.push('шипел на судей');
+  const place=pts>=5?1:pts>=4?2:pts>=3?3:0; p.evOpen=null; awardEvent(p,place,place?'Судьи ставят '+place+' место!':'Без места: '+why.join(', ')+'.'); }
+function awardEvent(p,place,text){ const E=EVENTS[RL(p)];
+  if(place){ trophy(E.icon,E.prize+' · '+place+' место',p.name); earnFree([0,3,2,1][place],E.name.toLowerCase()); p.stats.happy=clamp(p.stats.happy+[0,40,30,20][place]); sfx('evo'); }
+  else { p.stats.happy=clamp(p.stats.happy-10); sfx('miss'); }
+  p.msg=E.name+': '+text+(place?' Награда стоит на полке.':''); p.msgRaw=true; p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; }
+function finishEvent(p){ const r=mg.score/(mg.total||5), E=EVENTS[mg.ev]; let place=r>=.8?1:r>=.6?2:r>=.4?3:0, text='';
+  if(E.grade){ const g=r>=.9?5:r>=.7?4:r>=.5?3:2; place=[0,0,3,2,1][g-1]; text='оценка «'+g+'» ('+mg.score+' из '+mg.total+').'; if(g===5){ p.fives=(p.fives||0)+1; if(p.fives===3) trophy('🎓','Красный диплом',p.name); } }
+  else if(mg.ev==='zoomer'){ const v=Math.round(r*1.3e6); text=(v>=1e6?(v/1e6).toFixed(1).replace('.',',')+' млн':Math.round(v/1000)+' тыс.')+' просмотров!'; place=v>=1e6?1:v>=6e5?2:v>=3e5?3:0; }
+  else if(mg.ev==='office'){ text='отчёт сдан, '+mg.score+' из 10 писем разобраны верно.'; }
+  else text='результат '+mg.score+' из '+mg.total+'.'+(place?' '+place+' место!':' Без места.');
+  p.evOpen=null; mg=null; awardEvent(p,place,text); save(); render(); }
 const PAY={revive:[250,500,1000], eternal:5000, bedNights:12, bedStars:40};
 const CARE={missAfter:15*MIN, poopSickAfter:4*HOUR, sickWindow:48*HOUR, sickFatal:5, callTimeout:20*MIN, notifyGap:30*MIN, lifeMinusPerMiss:4*HOUR};
 function sicken(p,t,doses){ if(p.sick) return; p.sick=true; p.doses=doses||1; p.sickSince=t; p.sickMissed=false; p.sickLog=(p.sickLog||[]).filter(x=>t-x<CARE.sickWindow).concat([t]); if(p.stage!=='baby'&&p.sickLog.length>=CARE.sickFatal) p.fatal='болезней'; }
@@ -462,6 +502,7 @@ function missEv(p){
 }
 function step(p,t){
   if(p.dormant) return null;
+  if(p.vac){ if(t<p.vac.until) return null; p.vac=null; p.stats.happy=100; p.msg='Вернулся из отпуска загорелый и отдохнувший! 🏖 Привёз панаму — она в «стиле».'; if(!FORECAST&&!(S.owned||[]).includes('hat:panama')) S.owned=(S.owned||[]).concat(['hat:panama']); }
   const s=p.stats, c=CH[p.type], age=t-p.born, st=stageOf(age);
   if(st!==p.stage){
     const cr=care(p);
@@ -502,6 +543,15 @@ function step(p,t){
   if(st!=='baby'&&p.sick){ if(!p.sickSince) p.sickSince=t; if(!p.sickMissed&&t-p.sickSince>CARE.missAfter){ p.sickMissed=true; p.mistakes++; } }
   if(!napping&&!babyNight&&p.asleep&&p.light&&!p.lightPenalized&&t-p.sleptAt>30*MIN){p.lightPenalized=true;p.mistakes++;s.happy=clamp(s.happy-25);p.msg='Ты не выключил свет. Он плохо спал.';}
   if(p.extra>0) p.extra=Math.max(0,p.extra-CH[p.type].w.burn/(24*60)*(p.stage==='baby'?6:1));
+  { const EV=EVENTS[RL(p)]; if(EV&&st!=='baby'){
+    if(p.evOpen&&t>p.evOpen.until){ p.evOpen=null; s.happy=clamp(s.happy-15); p.msg='Пропустил: '+EV.name.toLowerCase()+'. Обидно 😢'; }
+    if(!p.evAt) p.evAt=t+rnd(2.5,4)*DAY;
+    if(!p.evWarned&&t>=p.evAt-DAY){ p.evWarned=true; p.msg='Через сутки: '+EV.name.toLowerCase()+'! Готовься.'; }
+    if(t>=p.evAt){ p.evOpen={until:t+20*HOUR}; p.evsDone=(p.evsDone||0)+1; p.evAt=t+rnd(3,4)*DAY; p.evWarned=false; p.msg='Сегодня '+EV.name.toLowerCase()+'! Кнопка внизу — «'+EV.btn.replace(/^\S+ /,'')+'».'; }
+  }
+  if(RL(p)==='office'&&st!=='baby'&&!p.asleep){ if(!p.vacAt) p.vacAt=t+7*DAY;
+    if(t>=p.vacAt){ const ok=(p.mistakes-(p.vacMiss||0))<=5; p.vacMiss=p.mistakes; p.vacAt=t+7*DAY;
+      if(ok){ p.vac={until:t+8*HOUR}; p.poop=0; p.messX=[]; p.call=null; p.ev=null; p.hidden=null; p.outside=false; p.msg='Уехал в отпуск на море 🏖 Ухаживать не нужно до '+new Date(t+8*HOUR).toTimeString().slice(0,5)+'.'; return null; } } } }
   if(RL(p)==='lifter'&&st!=='baby'){
     const c=CH.lifter, WI=weighIn(p);
     if(p.meetOpen&&t>p.meetOpen.until){ p.meetOpen=null; s.happy=clamp(s.happy-20); p.msg='Не вышел на помост. Соревнования прошли без него 😢'; }
@@ -601,6 +651,7 @@ function forecast(fromNow){
   const p=JSON.parse(JSON.stringify(p0)), notes=[], sx=p.sex, nm=p.name;
   const say=t=>fem(nm+': '+t,sx);
   const keyset=q=>{ const n=needs(q).slice(); if(q.call) n.push('зовёт тебя'); if(q.hidden) n.push('куда-то спрятался, найди его'); return n; };
+  const fw={w:!!p0.evWarned,d:p0.evsDone||0,v:!!p0.vac};
   const URGENT=['голодает!','тоскует!','болеет','выключи свет']; let pend=new Set(), lastNote=-1e15;
   let prev=new Set(keyset(p)), stage=p.stage, prevWarn=!!p.meetWarned, prevMeets=p.meetsDone||0, prevSleep=!!p.asleep;
   const end=p.lastTick+48*HOUR; FORECAST=true;
@@ -619,6 +670,8 @@ function forecast(fromNow){
       if(hwOn(t)&&!p.asleep){ const d=new Date(t);
         if(d.getHours()===12&&d.getMinutes()===0&&t>=fromNow){ const H=S.hunt; if(!(H&&H.day===dayKey(t)&&H.found.length>=3)) notes.push({at:t,text:'Тыквы снова спрятались 🎃 Поможешь найти?'}); }
         const T=totInfo(p,t); if(T&&T.at<=t&&T.at>t-MIN&&S.tot!==T.key&&t>=fromNow) notes.push({at:t,text:'Тук-тук! Кто-то стучит в дверь… Открой скорее 🎃'}); }
+      { const EV=EVENTS[RL(p)]; if(EV){ if(p.evWarned&&!fw.w) notes.push({at:t,text:fem('Завтра у меня '+EV.name.toLowerCase()+'! Нужно быть в форме 💪',sx)}); if((p.evsDone||0)>fw.d) notes.push({at:t,text:fem('Сегодня '+EV.name.toLowerCase()+'! Приходи, без тебя никак 🏆',sx)}); fw.w=!!p.evWarned; fw.d=p.evsDone||0; }
+        if(p.vac&&!fw.v) notes.push({at:t,text:fem('Я уехал в отпуск на море 🏖 Вернусь через 8 часов!',sx)}); if(!p.vac&&fw.v) notes.push({at:t,text:fem('Я вернулся из отпуска! Смотри, какой загар 😎',sx)}); fw.v=!!p.vac; }
       if(p.stage!==stage){ stage=p.stage; notes.push({at:t,text:fem('Я вырос! Приходи посмотреть на меня 😏',sx)}); }
       const cur=keyset(p), fresh=cur.filter(x=>!prev.has(x)&&!(x==='выключи свет'&&p.stage==='baby'));
       fresh.forEach(x=>pend.add(x)); [...pend].forEach(x=>{ if(!cur.includes(x)) pend.delete(x); });
@@ -663,6 +716,8 @@ function tapSpot(spot){
   if(hwOn(Date.now())){ const H=hunt(p); if(H.spots.includes(spot)&&!H.found.includes(spot)){ H.found.push(spot); const g=H.gold===spot; S.pumpkins=(S.pumpkins||0)+(g?5:1);
     p.msg=(g?'Золотая тыква! +5 🎃':'Нашёл тыкву! +1 🎃')+' ('+H.found.length+'/3)'+(H.found.length>=3?' Все тыквы на сегодня собраны! Завтра спрячутся новые.':''); p.msgRaw=true; sfx('happy'); save(); render(); return; } }
   if(spot==='lamp'){ act('light'); return; }
+  if(spot==='shelf'){ const T=S.trophies||[]; p.msg='Полка наград: '+T.length+'. '+T.slice(-4).reverse().map(x=>x.i+' '+x.t+' ('+x.n+')').join('; ')+'.'; p.msgRaw=true; sfx('click'); save(); render(); return; }
+  if(spot==='mess'){ const k=CH[RL(p)].mess; p.msg='Это '+MESS_NAME[k]+'. Нажми «Убрать», и станет чисто.'; sfx('click'); save(); render(); return; }
   if(spot==='fridge'){ furnOpen.fridge=Date.now()+2600; setTimeout(()=>{ sceneKey=''; render(); },2700); if(p.hidden){ p.msg='В холодильнике его нет. Только еда.'; sfx('no'); save(); render(); return; } if(!p.asleep){ view='food'; p.msg='Холодильник открыт. Что дадим?'; } else p.msg='Ночью холодильник лучше не трогать 🌙'; sfx('click'); save(); render(); return; }
   if(p.asleep&&!p.hidden){p.msg='Тсс, он спит.';render();return;}
   if(spot==='door'){ if(p.hidden){ p.msg='Сначала найди его!'; sfx('no'); save(); render(); return; } goOut(p,false); camX=0; save(); render(); return; }
@@ -730,6 +785,7 @@ function act(a){
     if(!free&&(S.coins||0)<pr){ styleNote='Не хватает монет: нужно '+pr+', у тебя '+(S.coins||0)+'.'; sfx('no'); render(); return; }
     if(!free){ S.coins-=pr; S.owned=(S.owned||[]).concat([styleTab+':'+styleSel]); }
     p.look=wearOn(p.look,styleTab,styleSel); styleNote=free?'Надето! Это уже твоё, бесплатно.':'Куплено навсегда! Списано '+pr+' '+coinWord(pr)+'. Теперь переодевать бесплатно.'; p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; save(); render(); return; }
+  if(p.vac&&!['status','back','style','applyStyle'].includes(a)){ p.msg='Он в отпуске на море до '+new Date(p.vac.until).toTimeString().slice(0,5)+' 🏖'; p.msgRaw=true; render(); return; }
   if(p.dormant&&a!=='status'&&a!=='back'){ if(a==='food'||a==='meal'){ p.dormant=false; p.stats.health=60; p.stats.hunger=60; p.stats.happy=40; p.lastTick=Date.now(); p.msg='Проснулся! Он так ждал тебя 🥺'; p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; sfx('happy'); view='main'; }
     else { p.msg='Он спит и ждёт тебя. Покорми его, чтобы разбудить.'; sfx('no'); } save(); render(); return; }
   if(a==='bed'){ if((S.beds||0)>0){ S.beds--; p.onBed=true; walkX=872; panTo(872-VIEW/2); p.msg='Уложил на кровать. Утром у него будет отличное настроение ☀️ Осталось ночей: '+S.beds+'.'; sfx('happy'); save(); render(); }
@@ -744,13 +800,14 @@ function act(a){
     if(a==='scold') sfx(S.pet.stats.disc>prevDisc?'scold':'no');
     if(a==='snack') sfx('eat');
     if(a==='play'&&mg) sfx('click'); },0);
-  if(a==='status'){view=view==='status'?'main':'status';render();return;}
+  if(a==='status'){view=view==='status'?'main':'status'; statSub='main'; render();return;}
   if(a.startsWith('g_')){ view='main'; const m=a.slice(2); if(m==='own') startGame(p); else startMini(p,m); save(); render(); return; }
   if(a==='tot'){ view='tot'; render(); return; }
   if(a==='totYes'||a==='totNo'){ const T=totInfo(p,Date.now()); view='main'; if(!T) { render(); return; } S.tot=T.key;
     if(a==='totYes'){ s.happy=clamp(s.happy+25); S.pumpkins=(S.pumpkins||0)+3; p.msg='За дверью дети в костюмах: «Сладость или гадость!» Угостили их конфетами 🍬 Они оставили в подарок 3 тыквы 🎃'; p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; sfx('happy'); }
     else { s.happy=clamp(s.happy-10); p.msg='Не открыли. Дети обиделись и нарисовали на двери мелом рожицу 😅'; }
     p.msgRaw=true; save(); render(); return; }
+  if(a==='event'){ if(p.evOpen&&!p.asleep){ startEvent(p); save(); render(); } return; }
   if(a==='meet'){ if(p.meetOpen&&!p.asleep){ startMeet(p); render(); } return; }
   if(a==='back'){view='main';styleNote='';render();return;}
   if(a==='food'){ if(p.asleep){p.msg='Спит. Еда подождёт.';} else view='food'; render();return; }
@@ -828,7 +885,7 @@ const PROGRAMS=[[0,'3×5',rep3(3,5,.75)],[1,'5/3/1',[[5,.75],[3,.85],[1,.95]]],[
   [0,'5/3/1',[[5,.75],[3,.85],[1,.95]]],[1,'4×4',rep3(4,4,.78)],[2,'5/3/1',[[5,.75],[3,.85],[1,.95]]],
   [0,'2×2',rep3(2,2,.87)],[1,'2×3',rep3(2,3,.85)],[2,'4×2',rep3(4,2,.8)]];
 function todayProgram(p){ const d=Math.floor((Date.now()-new Date().getTimezoneOffset()*MIN)/DAY); return PROGRAMS[(d+Math.floor(p.born/DAY))%PROGRAMS.length]; }
-const mgTotal=()=>!mg?5:mg.meet?9:mg.type==='lifter'?mg.sets.length:5, mgNeed=()=>!mg?3:mg.type==='lifter'&&!mg.meet?Math.max(1,mg.sets.length-1):3;
+const mgTotal=()=>!mg?5:mg.total?mg.total:mg.meet?9:mg.type==='lifter'?mg.sets.length:5, mgNeed=()=>!mg?3:mg.type==='lifter'&&!mg.meet?Math.max(1,mg.sets.length-1):3;
 function meetSpeed(w,M){ const k=w/M; return k<=.9?1400:k<=1?1150:k<=1.05?950:800; }
 function meetOptions(){ const i=Math.floor(mg.round/3), a=mg.round%3, M=mg.max[i], last=mg.lastW[i];
   if(a===0) return [[r25(M*.85),'спокойно'],[r25(M*.9),'уверенно'],[r25(M*.95),'смело']];
@@ -862,7 +919,7 @@ function nextRound(){
   if(mg.type==='zoomer'){ mg.opts=mg.deck.slice(r*2,r*2+2); mg.ans=Math.random()<.5?0:1; }
   if(mg.type==='alpha'||mg.type==='cat'||mg.type==='dog'){ mg.opts=mg.deck.slice(r*3,r*3+3); mg.ans=Math.floor(Math.random()*3); }
   renderMG();
-  if(mg.type==='trainer'||mg.type==='hamster'||mg.type==='lifter'||mg.type==='strongman'){ mg.t0=performance.now(); const loop=()=>{ if(!mg||mg.phase!=='play') return; const el=document.querySelector('.meter .mark'); const ph=((performance.now()-mg.t0)/(mg.meet?mg.period:mg.type==='lifter'?1700:mg.type==='strongman'?1600-mg.round*170:1500))%2; mg.pos=(ph<1?ph:2-ph)*100; if(el) el.style.left='calc('+mg.pos+'% - 3px)'; mgRaf=requestAnimationFrame(loop); }; mgRaf=requestAnimationFrame(loop); }
+  if(mg.type==='trainer'||mg.type==='hamster'||mg.type==='lifter'||mg.type==='strongman'){ mg.t0=performance.now(); const loop=()=>{ if(!mg||mg.phase!=='play') return; const el=document.querySelector('.meter .mark'); const ph=((performance.now()-mg.t0)/(mg.evSpeed?Math.max(700,mg.evSpeed-mg.round*60):mg.meet?mg.period:mg.type==='lifter'?1700:mg.type==='strongman'?1600-mg.round*170:1500))%2; mg.pos=(ph<1?ph:2-ph)*100; if(el) el.style.left='calc('+mg.pos+'% - 3px)'; mgRaf=requestAnimationFrame(loop); }; mgRaf=requestAnimationFrame(loop); }
 }
 function endRound(hit,note){
   stopTimers(); if(!mg||mg.phase!=='play') return;
@@ -874,6 +931,7 @@ function endRound(hit,note){
 }
 function finishGame(){
   stopTimers(); const p=S.pet; if(!p||!mg){mg=null;render();return;}
+  if(mg.ev){ finishEvent(p); return; }
   if(mg.meet){ finishMeet(p); return; }
   const win=mg.score>=mgNeed(), c=CH[p.type], T=mgTotal();
   if(win){p.stats.happy=clamp(p.stats.happy+25);p.extra=Math.max(-2*c.fatDiv,p.extra-c.w.game);p.msg=mg.type==='lifter'?(mg.prog+': чисто '+mg.score+' из '+T+' подходов. Хорошая тренировка, он доволен.'):('Победа '+mg.score+' из '+T+'! Он доволен и немного похудел.');}
@@ -885,7 +943,7 @@ function finishMeet(p){
   const tot=mg.best.reduce((a,b)=>a+b,0), zero=mg.best.some(b=>!b), M=mg.max.reduce((a,b)=>a+b,0);
   p.meetOpen=null;
   if(zero){ p.stats.happy=clamp(p.stats.happy-15); p.msg='Баранка: в '+LIFTS[mg.best.findIndex(b=>!b)].toLowerCase()+' ни одной засчитанной попытки. Без сумы и без медали 😔'; }
-  else { const pl=tot>=M*1.02?1:tot>=M*.97?2:3, coins=[0,3,2,1][pl]; p.medals=(p.medals||0)+1; p.stats.happy=clamp(p.stats.happy+[0,45,35,25][pl]); earnFree(coins,'медаль на соревнованиях');
+  else { const pl=tot>=M*1.02?1:tot>=M*.97?2:3, coins=[0,3,2,1][pl]; p.medals=(p.medals||0)+1; trophy(['','🥇','🥈','🥉'][pl],'Соревнования по пауэрлифтингу · '+pl+' место',p.name); p.stats.happy=clamp(p.stats.happy+[0,45,35,25][pl]); earnFree(coins,'медаль на соревнованиях');
     p.msg='Сумма '+kg(tot)+' кг ('+mg.best.map(kg).join(' / ')+'). '+['','Золото! 🥇','Серебро 🥈','Бронза 🥉'][pl]+' Медаль №'+p.medals+'.'; }
   p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; mg=null; save(); render();
 }
@@ -953,13 +1011,13 @@ function renderMG(){
   const v=document.getElementById('mgView'); if(!mg){v.hidden=true;return;}
   if(mg.mode) return renderMini(v);
   const c=CH[mg.type]; let body='';
-  const unit=mg.meet?'Попытка ':mg.type==='lifter'?'Подход ':'Раунд ';
-  const head=`<h3><span>${mg.meet?'Соревнования':mg.type==='lifter'?mg.prog:c.game}</span><span>${mg.phase==='intro'?(mgTotal()+(mg.meet?' попыток':mg.type==='lifter'?(mgTotal()<5?' подхода':' подходов'):' раундов')):unit+Math.min(mg.round+(mg.phase==='play'||mg.phase==='choose'?1:0),mgTotal())+'/'+mgTotal()+' · '+(mg.type==='lifter'?'засчитано ':'очки ')+mg.score}</span></h3>`;
+  const unit=mg.ev?'Этап ':mg.meet?'Попытка ':mg.type==='lifter'?'Подход ':'Раунд ';
+  const head=`<h3><span>${mg.ev?mg.evName:mg.meet?'Соревнования':mg.type==='lifter'?mg.prog:c.game}</span><span>${mg.phase==='intro'?(mgTotal()+(mg.meet?' попыток':mg.type==='lifter'?(mgTotal()<5?' подхода':' подходов'):' раундов')):unit+Math.min(mg.round+(mg.phase==='play'||mg.phase==='choose'?1:0),mgTotal())+'/'+mgTotal()+' · '+(mg.type==='lifter'?'засчитано ':'очки ')+mg.score}</span></h3>`;
   if(mg.phase==='intro'){
-    const intro=mg.meet?'Помост. Присед, жим и тяга, по три попытки. Перед каждой попыткой выбираешь вес: чем тяжелее, тем быстрее метка. В каждом движении нужна хотя бы одна засчитанная попытка, иначе баранка. Медаль зависит от суммы.'
+    const intro=mg.ev?'<b>'+mg.evName+'</b><br>'+EVENTS[mg.ev].rules:mg.meet?'Помост. Присед, жим и тяга, по три попытки. Перед каждой попыткой выбираешь вес: чем тяжелее, тем быстрее метка. В каждом движении нужна хотя бы одна засчитанная попытка, иначе баранка. Медаль зависит от суммы.'
       :mg.type==='lifter'?'Сегодня в плане: <b>'+mg.prog+'</b>. '+mg.sets.map(([r,w])=>r+'×'+kg(w)).join(', ')+' кг.<br>Жми «Подъём!», когда метка в зоне. Сделай чисто '+mgNeed()+' из '+mgTotal()+', и он будет доволен. Завтра будет другая тренировка.'
       :RULES[mg.type]+'<br>Угадай 3 из 5, и он будет счастлив.';
-    body=`<div class="q">${intro}</div><div class="lcdbtns"><button id="mgGo">${mg.meet?'На помост':'Начать'}</button></div>`;
+    body=`<div class="q">${intro}</div><div class="lcdbtns"><button id="mgGo">${mg.meet?'На помост':mg.ev?'Поехали!':'Начать'}</button></div>`;
   } else if(mg.phase==='choose'){
     const i=Math.floor(mg.round/3);
     body=`<div class="q"><b>${LIFTS[i]}, ${mg.round%3+1}-я попытка.</b><br>Какой вес заказываем?${mg.best[i]?'<br>Лучший результат: '+kg(mg.best[i])+' кг':''}</div><div class="lcdbtns">${mg.opts.map(([w,t],k)=>`<button data-w="${w}" class="hide">${kg(w)} кг<small style="display:block;font-weight:400">${t}</small></button>`).join('')}</div>`;
@@ -995,7 +1053,7 @@ function renderMG(){
         const why=R[Math.floor(Math.random()*R.length)];
         if(!mg.meet){ endRound(ok, ok?(d<=6?'Чисто, все повторы как по учебнику!':'Тяжело, но подход сделан.'):'Подход сорван: '+why+'.'); return; }
         endRound(ok, d<=6?'⚪⚪⚪ Три белые. Вес засчитан!':ok?'⚪⚪🔴 Две белые. Вес засчитан!':d<=24?'🔴🔴⚪ Не засчитано: '+why+'.':'🔴🔴🔴 Не засчитано: '+why+'.'); return; }
-      const ok=mg.pos>=38&&mg.pos<=62, SM=mg.type==='strongman'; endRound(ok, ok?mg.ex+(H?': колесо раскрутилось!':SM?' на помосте! Зал ревёт.':': чистое повторение.'):mg.ex+(H?': соскочил с колеса.':SM?' выскользнул из рук.':': сбился с темпа.'));};
+      const ok=mg.pos>=38&&mg.pos<=62, SM=mg.type==='strongman'; if(mg.ev) return endRound(ok, ok?mg.ex+' — отлично!':mg.ex+' — сбился.'); endRound(ok, ok?mg.ex+(H?': колесо раскрутилось!':SM?' на помосте! Зал ревёт.':': чистое повторение.'):mg.ex+(H?': соскочил с колеса.':SM?' выскользнул из рук.':': сбился с темпа.'));};
     if(mg.type==='thai'){ if(!mg.hideSeq) A.onclick=()=>{ mg.hideSeq=true; sfx('click'); renderMG(); };
       else v.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{ mg.inp.push(b.dataset.k); sfx('click'); const i=mg.inp.length-1;
         if(mg.inp[i]!==mg.seq[i]) return endRound(false,'Сбился! Было: '+mg.seq.join(' → ')+'.');
@@ -1540,7 +1598,17 @@ function charSVG(type,stage,form,mood,fat,sex,breed,look){
   const B=breedOf(type,breed);
   return type==='dog'?dog(stage,form,mood,fat,{fem:sex==='f',breed:B,look}):cat(stage,form,mood,fat,{fem:sex==='f',breed:B,look});
 }
+const MESS_NAME={plates:'блины от штанги',stones:'атласные камни',wraps:'бинты и перчатки',dumbbell:'гантели и коврик',paper:'бумажки и стаканчики из-под кофе',sock:'носки и коробка из-под пиццы',box:'пакеты доставки и банки энергетика',toy:'кубики и мячик',poop:'какашки',seeds:'шелуха от семечек'};
+const MESS_SHORT={plates:'блины',stones:'камни',wraps:'бинты',dumbbell:'гантели',paper:'бумажки',sock:'носки',box:'пакеты',toy:'игрушки',poop:'какашки',seeds:'шелуху'};
 function messSVG(kind,x){
+  const S2=`stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"`;
+  if(kind==='plates') return `<g transform="translate(${x} 198)">${[['#d6304a',16,0],['#3b6fd4',13,-7],['#f2c14e',10,-13]].map(([c,r,dy])=>`<ellipse cx="0" cy="${dy}" rx="${r+6}" ry="6" fill="${c}" ${S2}/><ellipse cx="0" cy="${dy}" rx="4" ry="1.6" fill="#2a2a2a"/>`).join('')}</g>`;
+  if(kind==='stones') return `<g transform="translate(${x} 198)" ${S2}><ellipse cx="-8" cy="-9" rx="13" ry="10" fill="#9aa0a6"/><ellipse cx="10" cy="-7" rx="10" ry="8" fill="#b8bec6"/><path d="M-14 -12 q4 -3 8 0" fill="none" stroke="#6d737a" stroke-width="1.5"/></g>`;
+  if(kind==='wraps') return `<g transform="translate(${x} 198)"><path d="M-22 -2 q8 -10 16 -2 q8 8 16 -2 q6 -6 12 0" fill="none" stroke="#f7f7f2" stroke-width="5" stroke-linecap="round"/><path d="M-22 -2 q8 -10 16 -2 q8 8 16 -2 q6 -6 12 0" fill="none" stroke="${OUT}" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 3"/><g ${S2}><ellipse cx="12" cy="-12" rx="8" ry="9" fill="#d6304a"/><rect x="6" y="-5" width="12" height="5" rx="2" fill="#fff"/></g></g>`;
+  if(kind==='dumbbell') return `<g transform="translate(${x} 198)" ${S2}><rect x="-26" y="-4" width="40" height="4" rx="2" fill="#7bbf8a"/><g transform="translate(6 -10) rotate(-8)"><rect x="-13" y="-2.5" width="26" height="5" fill="#9aa0a6"/><rect x="-19" y="-9" width="8" height="18" rx="2" fill="#3b4a6b"/><rect x="11" y="-9" width="8" height="18" rx="2" fill="#3b4a6b"/></g></g>`;
+  if(kind==='paper') return `<g transform="translate(${x} 198)" ${S2}><circle cx="-10" cy="-6" r="7" fill="#fff"/><path d="M-14 -8 l4 3 l3 -4 M-12 -2 l5 -2" fill="none" stroke-width="1.2"/><path d="M4 -20 h14 l-2 20 h-10 z" fill="#f4f0e6"/><rect x="3" y="-23" width="16" height="4" rx="1" fill="#6b4a2a"/><rect x="5" y="-14" width="12" height="5" fill="#c9915a" stroke="none"/></g>`;
+  if(kind==='sock') return `<g transform="translate(${x} 198)" ${S2}><rect x="-4" y="-10" width="30" height="10" rx="1" fill="#e9c38a"/><text x="11" y="-2" text-anchor="middle" font-family="Arial" font-weight="900" font-size="6" fill="#d6304a" stroke="none">PIZZA</text><path d="M-20 -26 h8 v16 h8 v8 h-16 z" fill="#fff" transform="rotate(-12)"/><path d="M-20 -21 h8" stroke="#e8584f" stroke-width="3" transform="rotate(-12)"/></g>`;
+  if(kind==='box') return `<g transform="translate(${x} 198)" ${S2}><path d="M-20 -24 h22 l2 24 h-26 z" fill="#f2c14e"/><path d="M-14 -24 q5 -8 10 0" fill="none"/><text x="-9" y="-9" text-anchor="middle" font-family="Arial" font-weight="900" font-size="6" fill="#2a2a2a" stroke="none">ЕДА</text><rect x="8" y="-16" width="9" height="16" rx="2" fill="#7bd36b"/><rect x="8" y="-13" width="9" height="5" fill="#2a2a2a" stroke="none"/></g>`;
   if(kind==='plates') return `<g transform="translate(${x} 196)" stroke="${OUT}" stroke-width="2.5"><ellipse cx="-6" cy="0" rx="5" ry="14" fill="#2a2a2e"/><ellipse cx="5" cy="2" rx="4" ry="11" fill="#d6304a"/><circle cx="-6" cy="0" r="2" fill="#888" stroke="none"/></g>`;
   if(kind==='seeds') return `<g transform="translate(${x} 200)">${[[-12,-3,20],[-4,-6,-30],[5,-2,60],[13,-5,10],[0,-11,-70],[-8,-12,40]].map(([a,b,r])=>`<ellipse cx="${a}" cy="${b}" rx="4.5" ry="2.4" transform="rotate(${r} ${a} ${b})" fill="#3a3330" stroke="#f2e6c8" stroke-width="1.2"/>`).join('')}</g>`;
   const st=`stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"`;
@@ -1570,6 +1638,7 @@ function furnitureSVG(p){
   <g ${st}><rect x="196" y="130" width="14" height="16" rx="2" fill="#fff"/><circle cx="236" cy="140" r="6" fill="#7bd36b"/></g></g>`;
   // кровать
   s+=`<g class="spot${pk('bed')}" data-spot="bed" transform="translate(320 0)"><g ${st}><rect x="612" y="118" width="20" height="78" rx="3" fill="${wood}"/><rect x="520" y="160" width="100" height="24" rx="4" fill="${wood}"/><rect x="524" y="148" width="92" height="16" rx="6" fill="${lin}"/><rect x="584" y="140" width="26" height="12" rx="5" fill="#fff"/></g>${S.bedMessy?`<path d="M524 158 q20 -14 40 -2 q20 10 52 -4 v32 h-92 z" fill="${lin2}" stroke="${OUT}" stroke-width="2"/>`:`<path d="M524 164 h92 v20 h-92 z" fill="${lin2}" stroke="${OUT}" stroke-width="2"/>`}${RR.linen==='stars'?`<text x="540" y="178" font-size="9" fill="#fff6c8">★ ★ ★</text>`:''}<rect x="516" y="118" width="120" height="78" fill="transparent"/></g>`;
+  if((S.trophies||[]).length){ const T=S.trophies.slice(-5); s+=`<g class="spot" data-spot="shelf"><rect x="466" y="112" width="96" height="6" rx="2" fill="${wood2}" stroke="${OUT}" stroke-width="2"/><path d="M474 118 v8 M554 118 v8" stroke="${OUT}" stroke-width="2"/>${T.map((x,i)=>`<text x="${478+i*19}" y="110" text-anchor="middle" font-size="15">${x.i}</text>`).join('')}<rect x="462" y="88" width="104" height="40" fill="transparent"/></g>`; }
   if(S.foundStreet) s+=`<g class="spot" data-spot="door"><g ${st}><rect x="208" y="98" width="56" height="96" rx="4" fill="#a8733f"/><rect x="214" y="104" width="44" height="40" rx="3" fill="#bfe3ff"/><path d="M236 104 v40 M214 124 h44" fill="none"/></g><circle cx="254" cy="160" r="3" fill="#f2c14e" stroke="${OUT}" stroke-width="1.5"/><rect x="204" y="94" width="64" height="104" fill="transparent"/></g>`;
   s+=`<g class="spot" data-spot="lamp"><g stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"><path d="M300 194 v-96" fill="none"/><path d="M286 98 h28 l-6 -24 h-16 z" fill="${p.light?'#ffe08a':'#b8b2a0'}"/><ellipse cx="300" cy="194" rx="12" ry="3" fill="#777"/></g><rect x="282" y="70" width="36" height="128" fill="transparent"/></g>`;
   s+=`<g class="spot" data-spot="fridge"><g ${st}><rect x="22" y="62" width="62" height="132" rx="6" fill="#eef2f6"/><path d="M22 108 h62" fill="none"/></g>${FO('fridge')?`<g ${st}><rect x="26" y="112" width="54" height="78" fill="#dff1ff"/><path d="M26 140 h54 M26 166 h54" fill="none"/></g><text x="30" y="136" font-size="13">🥛🧀</text><text x="30" y="162" font-size="13">🍎🥕</text><text x="30" y="186" font-size="13">🍰🥩</text>`:`<rect x="74" y="74" width="4" height="22" rx="2" fill="#9aa0a6"/><rect x="74" y="118" width="4" height="30" rx="2" fill="#9aa0a6"/>`}<rect x="18" y="58" width="70" height="140" fill="transparent"/></g>`;
@@ -1591,8 +1660,9 @@ function sceneSVG(p,m,fat,evo){
   const hwNow=hwOn(Date.now());
   s+=furnitureSVG(p);
   if(hwNow){ s+=hwRoomSVG(p); const H=hunt(p); H.spots.filter(k=>!H.found.includes(k)).forEach(k=>{ const [x,y]=HUNT_X[k]; s+=`<g data-spot="${k}" style="cursor:pointer"><circle class="hwglow" cx="${x}" cy="${y-8}" r="14" fill="#ffb347"/>`+pumpkinSVG(x,y,8,H.gold===k,false)+`<circle cx="${x}" cy="${y-8}" r="22" fill="transparent"/></g>`; }); }
-  (p.messX||[]).slice(0,p.poop).forEach(x=>s+=messSVG(CH[RL(p)].mess,x));
-  if(!p.hidden){
+  (p.messX||[]).slice(0,p.poop).forEach(x=>s+=`<g class="spot" data-spot="mess">`+messSVG(CH[RL(p)].mess,x)+`<rect x="${x-26}" y="166" width="52" height="36" fill="transparent"/></g>`);
+  if(p.vac) s+=`<g transform="translate(${walkX} 150)"><rect x="-70" y="-22" width="140" height="34" rx="8" fill="#fff6c8" stroke="${OUT}" stroke-width="2"/><text y="0" text-anchor="middle" font-family="Rubik,sans-serif" font-weight="700" font-size="13" fill="${OUT}">🏖 В отпуске до ${new Date(p.vac.until).toTimeString().slice(0,5)}</text></g>`;
+  if(!p.hidden&&!p.vac){
     const sc=p.stage==='teen'?.9:1;
     const hop=!p.asleep&&m!=='sick'&&m!=='sad';
     s+=`<g id="mover" style="transform:translate(${walkX}px,${p.onBed&&p.asleep?168:196}px);transition:transform 1.4s ease-in-out;pointer-events:none"><g class="${hop?'hop':''}"><g id="flip" style="transform:scale(${walkDir*sc},${sc});transition:transform .3s">${charSVG(p.type,p.stage,p.stage==='teen'?p.teenForm:p.form,m,fat,p.sex,p.breed,p.look)}</g></g>`;
@@ -1951,7 +2021,7 @@ const ICONS={need:'!',riddle:'?',
   sleep:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.2a6 6 0 1 0 3.3 9.6A5 5 0 0 1 10.5 2.2z" fill="#fff6c8"/></svg>',
   ok:'<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.4" fill="#e8930c"/><g stroke="#e8930c" stroke-width="1.6" stroke-linecap="round"><path d="M8 1v1.8M8 13.2V15M1 8h1.8M13.2 8H15M3 3l1.3 1.3M11.7 11.7 13 13M13 3l-1.3 1.3M4.3 11.7 3 13"/></g></svg>'};
 function needs(p){
-  const s=p.stats, n=[]; if(p.dormant) return n;
+  const s=p.stats, n=[]; if(p.dormant||p.vac) return n;
   if(p.asleep){ if(p.light) n.push('выключи свет'); return n; }
   if(s.hunger<=0) n.push('голодает!'); else if(s.hunger<=25) n.push('проголодался');
   if(s.happy<=0) n.push('тоскует!'); else if(s.happy<=25) n.push('заскучал');
@@ -1979,7 +2049,7 @@ function drawPet(move){
   const p=S.pet; if(!p) return;
   const m=moodOf(p), fat=fatLevel(p), evo=p.evolvedAt&&Date.now()-p.evolvedAt<5000;
   if(move) tickWalk(p,m);
-  const key=[p.type,p.breed,JSON.stringify(p.look||{}),p.sex,p.stage,p.form,p.teenForm,m,fat,p.poop,(p.messX||[]).join(','),p.hidden,p.asleep,p.light,!!p.call,evo,hwOn(Date.now())&&S.hunt?S.hunt.day+S.hunt.found.join(','):'',JSON.stringify(S.room||{}),S.bedMessy,S.curtOpen,Object.values(furnOpen).filter(x=>x>Date.now()).length].join('|');
+  const key=[p.type,p.breed,JSON.stringify(p.look||{}),p.sex,p.stage,p.form,p.teenForm,m,fat,p.poop,(p.messX||[]).join(','),p.hidden,p.asleep,p.light,!!p.call,evo,(S.trophies||[]).length,!!p.vac,hwOn(Date.now())&&S.hunt?S.hunt.day+S.hunt.found.join(','):'',JSON.stringify(S.room||{}),S.bedMessy,S.curtOpen,Object.values(furnOpen).filter(x=>x>Date.now()).length].join('|');
   const el=$('scene');
   if(camX===null||camX<camMin(p)||camX>camMax(p)) camX=Math.max(camMin(p),Math.min(camMax(p),p.stage==='baby'?320:walkX-VIEW/2));
   if(p.outside){ const r=rel(p), t=Date.now(), F=streetFinds(p), E=encounter(p); const k2='out|'+key+'|'+r.kind+r.name+r.left+r.wants+(r.flowersUntil>t)+(t<(p.reactUntil||0))+(r.love>=60)+(r.task?r.task.type:'')+r.couple+'|'+new Date(t).getHours()+isRain(t)+'|'+F.list.map(f=>f.got).join()+'|'+(E?E.kind+E.x:'')+'|'+(p.stX||206)+'|'+p.hidden; if(k2!==sceneKey){ el.innerHTML=streetSVG(p,m,fat); sceneKey=k2; applyCam(); } return; }
@@ -1995,7 +2065,7 @@ function renderStatus(p){
   $('statView').innerHTML=[
     ['Возраст',dur(Date.now()-p.born)],['Стадия',stageName(p)]].concat(p.role&&p.role!==p.type?[['Вид',bodyTitle(p)]]:[]).concat(p.breed?[['Порода',breedOf(p.type,p.breed).name]]:[]).concat([['Вес',weightText(p)],
     ['Здоровье','<span class="hearts">'+hearts(s.health)+'</span>'],['Сытость','<span class="hearts">'+hearts(s.hunger)+'</span>'],['Настроение','<span class="hearts">'+hearts(s.happy)+'</span>'],
-    ['Дисциплина',Math.round(s.disc)+'%']].concat(p.revives?[['Жизнь','вторая попытка ('+p.revives+')']]:[]).concat((S.beds||0)>0?[['Ночей на кровати',S.beds]]:[])).concat(RL(p)==='lifter'?[['Весовая категория',weighIn(p).cap],['Медали',p.medals||0],['Соревнования',p.meetOpen?'сегодня! выходи на помост':p.meetAt&&p.stage!=='baby'?'через '+dur(Math.max(0,p.meetAt-Date.now())):'после взросления'],['Сегодня в зале',p.stage!=='baby'?(()=>{const P=todayProgram(p);return LIFTS[P[0]].toLowerCase()+' '+P[1];})():'—']]:[]).concat([
+    ['Дисциплина',Math.round(s.disc)+'%']].concat(EVENTS[RL(p)]&&p.stage!=='baby'?[[EVENTS[RL(p)].name,p.evOpen?'сегодня!':p.evAt?'через '+dur(Math.max(0,p.evAt-Date.now())):'скоро']]:[]).concat(p.vac?[['Отпуск','до '+new Date(p.vac.until).toTimeString().slice(0,5)]]:[]).concat(p.revives?[['Жизнь','вторая попытка ('+p.revives+')']]:[]).concat((S.beds||0)>0?[['Ночей на кровати',S.beds]]:[])).concat(RL(p)==='lifter'?[['Весовая категория',weighIn(p).cap],['Медали',p.medals||0],['Соревнования',p.meetOpen?'сегодня! выходи на помост':p.meetAt&&p.stage!=='baby'?'через '+dur(Math.max(0,p.meetAt-Date.now())):'после взросления'],['Сегодня в зале',p.stage!=='baby'?(()=>{const P=todayProgram(p);return LIFTS[P[0]].toLowerCase()+' '+P[1];})():'—']]:[]).concat([
   ]).map(([a,b])=>`<div class="row"><span>${a}</span><span>${b}</span></div>`).join('')+
     `<div class="hint2">♥♥♥♥ — всё отлично, ♡♡♡♡ — срочно позаботься. Одна еда или игра даёт одно сердечко.</div>`+
     (p.stage!=='baby'&&!p.dormant?(p.morph?`<div class="evo"><b>✨ Превращение в: ${(isF(p)&&CH[p.morph.to].titleF?CH[p.morph.to].titleF:CH[p.morph.to].title).toLowerCase()}</b><span>Пройдено шагов: ${p.morph.step} из 3.</span><span>Следующий шаг: «${MORPH.steps[p.morph.to][p.morph.step]}» · ${MORPH.price[p.morph.step]} монет${Date.now()<(p.morph.next||0)?' · доступно через '+dur(p.morph.next-Date.now()):''}</span><button id="morphNext" type="button">Сделать шаг</button></div>`
@@ -2003,12 +2073,21 @@ function renderStatus(p){
     (p.eternal?`<div class="evo"><b>♾ Вечный</b><span>Он не умрёт. Если о нём забыть, уснёт и будет ждать тебя. Можно отправить его в Зал славы и завести второго питомца — обычного.</span><button id="hallBtn" type="button">🏛 Отправить в Зал славы</button></div>`
      :!S.eternalUsed&&!S.hall?`<div class="evo"><b>♾ Вечный питомец</b><span>Сделай ${esc(p.name)} вечным: он больше не умрёт — если о нём забыть, он уснёт и будет ждать тебя. Потом его можно отправить в Зал славы и завести второго. <b>Только один-единственный раз за всю игру</b> — для одного питомца и только пока он жив.</span><button id="eternalBtn" type="button">Сделать вечным · ${PAY.eternal} ⭐</button></div>`:'');
   $('statView').querySelectorAll('[data-morph]').forEach(b=>b.onclick=()=>{ const t=b.dataset.morph; askConfirm('Превратить '+p.name+' в: '+(isF(p)&&CH[t].titleF?CH[t].titleF:CH[t].title).toLowerCase()+'? Три шага по '+MORPH.price.join(' / ')+' монет, между шагами 12 часов. Первый шаг — сейчас.','Начать',()=>{ p.morph={to:t,step:0,next:0}; morphStep(p); if(p.morph&&p.morph.step===0) p.morph=null; save(); render(); }); });
+  statLayout(p);
   const mn=$('morphNext'); if(mn) mn.onclick=()=>{ morphStep(p); save(); render(); };
   const eb=$('eternalBtn'), hb=$('hallBtn');
   if(eb) eb.onclick=()=>askConfirm('Сделать '+p.name+' вечным за '+PAY.eternal+' ⭐?\n\nЭто можно сделать только один раз за всю игру — потом ни для одного другого питомца купить уже не получится.','Да, сделать вечным',()=>act('eternal'));
   if(hb) hb.onclick=()=>askConfirm('Отправить '+p.name+' в Зал славы? Дома станет пусто, и ты сможешь завести нового питомца. Забрать '+p.name+' обратно можно, когда дома никого не будет.','Отправить',()=>act('hall'));
 }
-let eternalConfirm=false;
+let eternalConfirm=false, statSub='main';
+function statLayout(p){ const V=$('statView'), blocks=[...V.children].filter(b=>b.classList.contains('evo'));
+  const mB=blocks.find(b=>b.querySelector('[data-morph],#morphNext')), eB=blocks.find(b=>b.querySelector('#eternalBtn,#hallBtn'));
+  if(statSub==='morph'&&!mB||statSub==='eternal'&&!eB) statSub='main';
+  const bar=document.createElement('div'); bar.className='lcdbtns'; bar.style.marginBottom='8px';
+  bar.innerHTML=`<button type="button" data-s="back">← ${statSub==='main'?(isF(p)?'К ней':'К нему'):'Состояние'}</button>`+(mB&&statSub==='main'?'<button type="button" data-s="morph">✨ Превращение</button>':'')+(eB&&statSub==='main'?`<button type="button" data-s="eternal">${p.eternal?'🏛 Зал славы':'♾ Вечный'}</button>`:'');
+  V.prepend(bar);
+  [...V.children].forEach(el=>{ if(el===bar) return; const isM=el===mB, isE=el===eB; el.hidden=statSub==='main'?(isM||isE):statSub==='morph'?!isM:!isE; });
+  bar.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{ const k=b.dataset.s; sfx('click'); if(k==='back'){ if(statSub==='main'){ view='main'; render(); } else { statSub='main'; renderStatus(p); } return; } statSub=k; renderStatus(p); }); }
 function askConfirm(text,ok,cb){ const T=window.Telegram&&Telegram.WebApp;
   if(T&&T.showConfirm&&tgInit()){ try{ T.showConfirm(text.replace(/\n\n/g,' '),r=>{ if(r) cb(); }); return; }catch(e){} }
   const d=document.createElement('div'); d.className='cfm'; d.innerHTML=`<div class="cfmbox"><p></p><div><button type="button" class="ok"></button><button type="button" class="no">Отмена</button></div></div>`;
@@ -2059,13 +2138,13 @@ function render(){
     if(hwNow){ const d=new Date(); if(d.getMonth()===9&&d.getDate()===31&&!S.hwGift){ S.hwGift=true; if(!owns('hat','witch')) S.owned=(S.owned||[]).concat(['hat:witch']); coinToast='Подарок на Хэллоуин: шляпа ведьмы! Она в «стиле» 🎃'; coinToastAt=Date.now(); save(); } }
     const H=hwNow?hunt(p):null; $('hwBadge').hidden=!H||!!mg||p.stage==='baby'; if(H) $('hwBadge').textContent='🎃 '+H.found.length+'/3';
     if(S.bdNote&&!p.evoNote){ p.evoNote={title:'🎂 С днём рождения!',why:'Это тебе: именная корона дня рождения '+S.bdNote+'. Такой нет больше ни у кого.',hint:'Надень её в «стиле» → Шапки.'}; S.bdNote=null; save(); }
-    if(!p.evoNote&&hwNow&&!S.hwIntro&&p.stage!=='baby'){ $('evo').hidden=false; $('evo').innerHTML=`<b>🎃 В игре Хэллоуин! До 1 ноября</b><span>Каждый день в комнате прячутся 3 тыквы. Присмотрись к мебели: где-то торчит хвостик и что-то светится. Нажми туда — и тыква твоя.</span><span>Тыквы — праздничная валюта: в «стиле» на них покупаются костюмы. 2 ноября тыквы исчезнут, а костюмы останутся навсегда.</span><span>31-го будет золотая тыква, а вечером кто-то постучит в дверь…</span><button id="evoOk" type="button">Искать тыквы!</button>`; $('evoOk').onclick=()=>{S.hwIntro=true;save();render();}; }
-    else if(!p.evoNote&&p.stage!=='baby'&&!S.bday&&!(S.bdAskAfter>Date.now())){ $('evo').hidden=false;
+    if(!p.evoNote&&hwNow&&!S.hwIntro&&p.stage!=='baby'){ $('evo').dataset.k=''; $('evo').hidden=false; $('evo').innerHTML=`<b>🎃 В игре Хэллоуин! До 1 ноября</b><span>Каждый день в комнате прячутся 3 тыквы. Присмотрись к мебели: где-то торчит хвостик и что-то светится. Нажми туда — и тыква твоя.</span><span>Тыквы — праздничная валюта: в «стиле» на них покупаются костюмы. 2 ноября тыквы исчезнут, а костюмы останутся навсегда.</span><span>31-го будет золотая тыква, а вечером кто-то постучит в дверь…</span><button id="evoOk" type="button">Искать тыквы!</button>`; $('evoOk').onclick=()=>{S.hwIntro=true;save();render();}; }
+    else if(!p.evoNote&&p.stage!=='baby'&&!S.bday&&!(S.bdAskAfter>Date.now())){ $('evo').hidden=false; if($('evo').dataset.k!=='bd'){ $('evo').dataset.k='bd';
       $('evo').innerHTML=`<b>🎂 Когда у тебя день рождения?</b><span>В этот день тебя будет ждать подарок, которого больше ни у кого нет. Дату можно указать только один раз.</span><div style="display:flex;gap:8px"><select id="bdD">${Array.from({length:31},(_,i)=>`<option>${i+1}</option>`).join('')}</select><select id="bdM">${['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'].map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}</select></div><div style="display:flex;gap:8px"><button id="bdOk" type="button">Сохранить</button><button id="bdLater" type="button" style="background:#9aa0a6">Позже</button></div>`;
       $('bdLater').onclick=()=>{ S.bdAskAfter=Date.now()+3*DAY; save(); render(); };
       $('bdOk').onclick=()=>{ const d=+$('bdD').value, m=+$('bdM').value; const v=String(d).padStart(2,'0')+'.'+String(m).padStart(2,'0');
-        askConfirm('Твой день рождения — '+d+' '+$('bdM').selectedOptions[0].text+'? Изменить потом будет нельзя.','Да, верно',()=>{ S.bday=v; save(); render(); if(tgInit()) api('/birthday',{day:d,month:m}).then(r=>{ if(r&&r.bday){ S.bday=r.bday; save(); render(); } }); bdayCheck(); }); }; }
-    else if(p.evoNote){ $('evo').hidden=false; $('evo').innerHTML=`<b>${esc(p.evoNote.title)}</b><span>${p.evoNote.why}</span><span>${fem(p.evoNote.hint,p.sex)}</span><button id="evoOk" type="button">Понятно</button>`; $('evoOk').onclick=()=>{p.evoNote=null;save();render();}; } else $('evo').hidden=true;
+        askConfirm('Твой день рождения — '+d+' '+$('bdM').selectedOptions[0].text+'? Изменить потом будет нельзя.','Да, верно',()=>{ S.bday=v; save(); render(); if(tgInit()) api('/birthday',{day:d,month:m}).then(r=>{ if(r&&r.bday){ S.bday=r.bday; save(); render(); } }); bdayCheck(); }); }; } }
+    else if(p.evoNote){ $('evo').dataset.k=''; $('evo').hidden=false; $('evo').innerHTML=`<b>${esc(p.evoNote.title)}</b><span>${p.evoNote.why}</span><span>${fem(p.evoNote.hint,p.sex)}</span><button id="evoOk" type="button">Понятно</button>`; $('evoOk').onclick=()=>{p.evoNote=null;save();render();}; } else { $('evo').hidden=true; $('evo').dataset.k=''; }
     { const T=totInfo(p,Date.now()); if(T&&Date.now()>=T.at&&Date.now()<T.until&&S.tot!==T.key&&!p.asleep&&!p.totMsg){ p.totMsg=T.key; p.msg='Тук-тук! Кто-то стучит в дверь… 🎃'; p.msgRaw=true; sfx('call'); } }
     $('styleBtn').textContent=view==='style'?'закрыть стиль':'стиль · '+(S.coins||0); $('styleBtn').hidden=!!mg||!!p.outside; $('styleBtn').onclick=()=>act('style');
     $('sndBtn').textContent=S.sound===false?'звук выкл':'звук'; $('sndBtn').onclick=()=>{S.sound=S.sound===false;save();unlockAudio();if(S.sound!==false)sfx('happy');render();};
@@ -2128,11 +2207,11 @@ function render(){
       const z=p.asleep;
       html=`<button class="btn" data-a="food" ${z?'disabled':''}>Еда<small>${foods(p)[0].toLowerCase()}</small></button>
         <button class="btn" data-a="play" ${z?'disabled':''}>Игра<small>${c.game.toLowerCase()}</small></button>
-        <button class="btn" data-a="clean">Убрать<small>уборка</small></button>
+        <button class="btn" data-a="clean">Убрать<small>${p.poop?MESS_SHORT[CH[RL(p)].mess]:'уборка'}</small></button>
         <button class="btn" data-a="heal">Лечить<small>таблетка</small></button>
         <button class="btn" data-a="light">Свет<small>${p.light?'вкл':'выкл'}</small></button>
         <button class="btn" data-a="scold" ${z?'disabled':''}>Отругать<small>воспитание</small></button>
-        ${(()=>{const h=new Date().getHours(); return p.stage!=='baby'&&!p.dormant&&!p.onBed&&(h>=21||(p.asleep&&isNight(Date.now())))&&view!=='status'?'<button class="btn wide" data-a="bed">'+((S.beds||0)>0?'🛏 Уложить на кровать<small>утром будет +настроение · осталось '+S.beds+'</small>':'🛏 Спать на кровати<small>'+PAY.bedNights+' ночей за '+PAY.bedStars+' ⭐ · утром +настроение</small>')+'</button>':'';})()}${(()=>{const T=totInfo(p,Date.now());return T&&Date.now()>=T.at&&Date.now()<T.until&&S.tot!==T.key&&!p.asleep&&view!=='status'?'<button class="btn wide" data-a="tot">🚪 Тук-тук! Открыть дверь</button>':'';})()}${RL(p)==='lifter'&&p.meetOpen&&view!=='status'?'<button class="btn wide" data-a="meet">🏆 Выступить на соревнованиях</button>':''}<button class="btn wide" data-a="status">${view==='status'?'Назад к нему':'Состояние'}</button>`;
+        ${(()=>{const h=new Date().getHours(); return p.stage!=='baby'&&!p.dormant&&!p.onBed&&(h>=21||(p.asleep&&isNight(Date.now())))&&view!=='status'?'<button class="btn wide" data-a="bed">'+((S.beds||0)>0?'🛏 Уложить на кровать<small>утром будет +настроение · осталось '+S.beds+'</small>':'🛏 Спать на кровати<small>'+PAY.bedNights+' ночей за '+PAY.bedStars+' ⭐ · утром +настроение</small>')+'</button>':'';})()}${(()=>{const T=totInfo(p,Date.now());return T&&Date.now()>=T.at&&Date.now()<T.until&&S.tot!==T.key&&!p.asleep&&view!=='status'?'<button class="btn wide" data-a="tot">🚪 Тук-тук! Открыть дверь</button>':'';})()}${EVENTS[RL(p)]&&p.evOpen&&view!=='status'?'<button class="btn wide" data-a="event">'+EVENTS[RL(p)].btn+'</button>':''}${RL(p)==='lifter'&&p.meetOpen&&view!=='status'?'<button class="btn wide" data-a="meet">🏆 Выступить на соревнованиях</button>':''}<button class="btn wide" data-a="status">${view==='status'?'Назад к нему':'Состояние'}</button>`;
     }
     if($('actions').dataset.h!==html){$('actions').innerHTML=html;$('actions').dataset.h=html;}
     $('actions').querySelectorAll('button').forEach(x=>x.onclick=()=>{ if(x.dataset.sh){ simulate(); if(S.pet){ buyTreat(S.pet,x.dataset.sh); save(); } render(); return; } if(x.dataset.en){ simulate(); if(S.pet){ encChoice(S.pet,x.dataset.en==='1'); save(); } render(); return; } if(x.dataset.r==='name'){ const v=($('relName').value||'').trim(); if(!v){ $('relErr').textContent='Напиши имя, чтобы познакомиться.'; return; } simulate(); if(S.pet){ nameRel(S.pet,v); save(); } render(); return; } if(x.dataset.r){ if(x.dataset.r!=='status2'){ simulate(); if(S.pet){ relAct(S.pet,x.dataset.r); save(); } render(); } } else act(x.dataset.a); });
