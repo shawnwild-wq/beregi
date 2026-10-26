@@ -41,6 +41,7 @@ body{background:radial-gradient(120% 80% at 50% 0%,var(--page),var(--page-2));co
 .bar{height:6px;border-radius:3px;background:var(--lcd-shade);overflow:hidden;flex-basis:100%}
 .bar span{display:block;height:100%;background:#f0b429}
 .snd+.snd{margin-left:6px}
+.statmore{display:flex;flex-direction:column;align-items:flex-start;gap:2px;margin-top:10px;border-top:1px dashed #cfc6b2;padding-top:6px}.statmore .link{background:none;border:0;padding:6px 0;font:500 13px Rubik,system-ui,sans-serif;color:var(--ink-soft);text-decoration:underline;cursor:pointer}
 .cfm{position:fixed;inset:0;background:rgba(20,26,40,.6);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}.cfmbox{background:#fffaf0;border:2.5px solid #2a2a2a;border-radius:14px;padding:16px;max-width:340px;font:15px/1.4 Rubik,system-ui,sans-serif;white-space:pre-line}.cfmbox div{display:flex;gap:8px;margin-top:12px}.cfmbox button{flex:1;font:700 14px Rubik,system-ui,sans-serif;border:0;border-radius:10px;padding:11px}.cfmbox .ok{background:#2a2a2a;color:#fff}.cfmbox .no{background:#e3ddd0}
 .hwb{border-color:#e8822a;color:#7a3c00;background:#ffe2c4;font-weight:700;cursor:default}
 .hwglow{animation:hwg 1.6s ease-in-out infinite}
@@ -727,7 +728,9 @@ function tapSpot(spot){
   else { const open=k=>{ furnOpen[k]=Date.now()+2600; setTimeout(()=>{ sceneKey=''; render(); },2700); };
     if(spot==='wardrobe'){ open('wardrobe'); const n=(S.owned||[]).length; p.msg=n?'В шкафу висит твой гардероб: вещей — '+n+'.':'Шкаф почти пустой. Загляни в «стиль».'; }
     else if(spot==='dresser'){ open('dresser'); p.msg='В комоде носки и футболки. Всё на месте.'; }
-    else if(spot==='bed'){ S.bedMessy=!S.bedMessy; p.msg=S.bedMessy?'Одеяло скомкано.':'Кровать заправлена. Красота.'; }
+    else if(spot==='bed'){ const h=new Date().getHours(), eve=h>=21||isNight(Date.now());
+      if(p.stage!=='baby'&&eve&&!p.onBed){ if((S.beds||0)>0){ act('bed'); return; } askConfirm('Уложить '+p.name+' спать на кровати? Утром у него будет отличное настроение. '+PAY.bedNights+' ночей на кровати — '+PAY.bedStars+' ⭐.','Купить',()=>act('bed')); return; }
+      S.bedMessy=!S.bedMessy; p.msg=(S.bedMessy?'Одеяло скомкано.':'Кровать заправлена. Красота.')+(p.stage!=='baby'&&!eve?' Вечером, после 21:00, сюда можно уложить его спать — утром будет +настроение.':p.onBed?' Сегодня он спит здесь.':''); }
     else if(spot==='curtain'){ S.curtOpen=!S.curtOpen; p.msg=S.curtOpen?'Штора открыта.':'Штора задёрнута.'; }
     else if(spot==='table') p.msg='На столе чашка и яблоко.';
     sfx('click'); }
@@ -2084,10 +2087,13 @@ function statLayout(p){ const V=$('statView'), blocks=[...V.children].filter(b=>
   const mB=blocks.find(b=>b.querySelector('[data-morph],#morphNext')), eB=blocks.find(b=>b.querySelector('#eternalBtn,#hallBtn'));
   if(statSub==='morph'&&!mB||statSub==='eternal'&&!eB) statSub='main';
   const bar=document.createElement('div'); bar.className='lcdbtns'; bar.style.marginBottom='8px';
-  bar.innerHTML=`<button type="button" data-s="back">← ${statSub==='main'?(isF(p)?'К ней':'К нему'):'Состояние'}</button>`+(mB&&statSub==='main'?'<button type="button" data-s="morph">✨ Превращение</button>':'')+(eB&&statSub==='main'?`<button type="button" data-s="eternal">${p.eternal?'🏛 Зал славы':'♾ Вечный'}</button>`:'');
+  bar.innerHTML=`<button type="button" data-s="back">← ${statSub==='main'?'Назад':'Состояние'}</button>`;
   V.prepend(bar);
-  [...V.children].forEach(el=>{ if(el===bar) return; const isM=el===mB, isE=el===eB; el.hidden=statSub==='main'?(isM||isE):statSub==='morph'?!isM:!isE; });
-  bar.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{ const k=b.dataset.s; sfx('click'); if(k==='back'){ if(statSub==='main'){ view='main'; render(); } else { statSub='main'; renderStatus(p); } return; } statSub=k; renderStatus(p); }); }
+  if(statSub==='main'&&(mB||eB)){ const more=document.createElement('div'); more.className='statmore';
+    more.innerHTML=(mB?'<button type="button" class="link" data-s="morph">✨ Превращение — сменить профессию</button>':'')+(eB?`<button type="button" class="link" data-s="eternal">${p.eternal?'🏛 Отправить в Зал славы':'♾ Вечный питомец'}</button>`:'');
+    V.appendChild(more); }
+  [...V.children].forEach(el=>{ if(el===bar||el.className==='statmore') return; const isM=el===mB, isE=el===eB; el.hidden=statSub==='main'?(isM||isE):statSub==='morph'?!isM:!isE; });
+  V.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{ const k=b.dataset.s; sfx('click'); if(k==='back'){ if(statSub==='main'){ view='main'; render(); } else { statSub='main'; renderStatus(p); } return; } statSub=k; renderStatus(p); }); }
 function askConfirm(text,ok,cb){ const T=window.Telegram&&Telegram.WebApp;
   if(T&&T.showConfirm&&tgInit()){ try{ T.showConfirm(text.replace(/\n\n/g,' '),r=>{ if(r) cb(); }); return; }catch(e){} }
   const d=document.createElement('div'); d.className='cfm'; d.innerHTML=`<div class="cfmbox"><p></p><div><button type="button" class="ok"></button><button type="button" class="no">Отмена</button></div></div>`;
@@ -2211,7 +2217,7 @@ function render(){
         <button class="btn" data-a="heal">Лечить<small>таблетка</small></button>
         <button class="btn" data-a="light">Свет<small>${p.light?'вкл':'выкл'}</small></button>
         <button class="btn" data-a="scold" ${z?'disabled':''}>Отругать<small>воспитание</small></button>
-        ${(()=>{const h=new Date().getHours(); return p.stage!=='baby'&&!p.dormant&&!p.onBed&&(h>=21||(p.asleep&&isNight(Date.now())))&&view!=='status'?'<button class="btn wide" data-a="bed">'+((S.beds||0)>0?'🛏 Уложить на кровать<small>утром будет +настроение · осталось '+S.beds+'</small>':'🛏 Спать на кровати<small>'+PAY.bedNights+' ночей за '+PAY.bedStars+' ⭐ · утром +настроение</small>')+'</button>':'';})()}${(()=>{const T=totInfo(p,Date.now());return T&&Date.now()>=T.at&&Date.now()<T.until&&S.tot!==T.key&&!p.asleep&&view!=='status'?'<button class="btn wide" data-a="tot">🚪 Тук-тук! Открыть дверь</button>':'';})()}${EVENTS[RL(p)]&&p.evOpen&&view!=='status'?'<button class="btn wide" data-a="event">'+EVENTS[RL(p)].btn+'</button>':''}${RL(p)==='lifter'&&p.meetOpen&&view!=='status'?'<button class="btn wide" data-a="meet">🏆 Выступить на соревнованиях</button>':''}<button class="btn wide" data-a="status">${view==='status'?'Назад к нему':'Состояние'}</button>`;
+        ${(()=>{const T=totInfo(p,Date.now());return T&&Date.now()>=T.at&&Date.now()<T.until&&S.tot!==T.key&&!p.asleep&&view!=='status'?'<button class="btn wide" data-a="tot">🚪 Тук-тук! Открыть дверь</button>':'';})()}${EVENTS[RL(p)]&&p.evOpen&&view!=='status'?'<button class="btn wide" data-a="event">'+EVENTS[RL(p)].btn+'</button>':''}${RL(p)==='lifter'&&p.meetOpen&&view!=='status'?'<button class="btn wide" data-a="meet">🏆 Выступить на соревнованиях</button>':''}<button class="btn wide" data-a="status">${view==='status'?'Назад к нему':'Состояние'}</button>`;
     }
     if($('actions').dataset.h!==html){$('actions').innerHTML=html;$('actions').dataset.h=html;}
     $('actions').querySelectorAll('button').forEach(x=>x.onclick=()=>{ if(x.dataset.sh){ simulate(); if(S.pet){ buyTreat(S.pet,x.dataset.sh); save(); } render(); return; } if(x.dataset.en){ simulate(); if(S.pet){ encChoice(S.pet,x.dataset.en==='1'); save(); } render(); return; } if(x.dataset.r==='name'){ const v=($('relName').value||'').trim(); if(!v){ $('relErr').textContent='Напиши имя, чтобы познакомиться.'; return; } simulate(); if(S.pet){ nameRel(S.pet,v); save(); } render(); return; } if(x.dataset.r){ if(x.dataset.r!=='status2'){ simulate(); if(S.pet){ relAct(S.pet,x.dataset.r); save(); } render(); } } else act(x.dataset.a); });
