@@ -42,7 +42,8 @@ body{background:radial-gradient(120% 80% at 50% 0%,var(--page),var(--page-2));co
 .bar span{display:block;height:100%;background:#f0b429}
 .snd+.snd{margin-left:6px}
 .hwb{border-color:#e8822a;color:#7a3c00;background:#ffe2c4;font-weight:700;cursor:default}
-.hwglow{animation:hwg 1.6s ease-in-out infinite}@keyframes hwg{0%,100%{opacity:.25}50%{opacity:.85}}
+.hwglow{animation:hwg 1.6s ease-in-out infinite}
+.rain{animation:rainf .5s linear infinite}@keyframes rainf{from{transform:translate(0,0)}to{transform:translate(-4px,10px)}}@keyframes hwg{0%,100%{opacity:.25}50%{opacity:.85}}
 @media (prefers-reduced-motion:reduce){.hwglow{animation:none}}
 #styleBtn{white-space:nowrap;border-color:#c98a10;color:#5a3d00;background:#fff3c4}
 .snd{white-space:nowrap;flex-shrink:0;margin-left:auto;background:none;border:1.5px solid var(--ink-soft);border-radius:999px;font:inherit;font-size:12px;color:var(--ink-soft);padding:2px 10px;cursor:pointer}
@@ -372,7 +373,7 @@ function care(p){ if(!p.care) p.care={ok:0,total:0,ok1:0,total1:0}; return p.car
 function ratio(ok,total){ return total?ok/total:1; }
 function decideForm(p){ const c=care(p); return (p.mistakes<=4 && p.stats.disc>=40 && ratio(c.ok,c.total)>=.6 && Math.round(p.extra/CH[p.type].fatDiv)<3)?'good':'bad'; }
 const SPOTS={curtain:{x:424,name:'за шторой',left:1},table:{x:535,name:'под столом',left:1},dresser:{x:611,name:'в комоде',left:1},wardrobe:{x:156,name:'в шкафу',left:1},bed:{x:896,name:'под кроватью'}};
-const camMin=p=>0, camMax=p=>!p||p.outside?0:p.stage==='baby'?320:WORLD-VIEW;
+const camMin=p=>0, camMax=p=>!p?0:p.outside?WORLD-VIEW:p.stage==='baby'?320:WORLD-VIEW;
 function addMess(p){ if(p.poop>=4) return; p.poop++; (p.messX=p.messX||[]).push(Math.round(p.stage==='baby'?rnd(24,616):rnd(24,936))); }
 function startEv(p,type,t){
   const s=p.stats, c=CH[p.type];
@@ -382,7 +383,7 @@ function startEv(p,type,t){
   if(type==='caprice'){ p.call={since:t,text:pick(c.calls)}; if(p.stage==='baby'&&!p.taughtScold){p.taughtScold=true;p.msg='Ноет без причины. Такое лечится кнопкой «Отругать».';} }
   if(type==='sick') sicken(p,t,1);
   if(type==='nap') p.napUntil=t+6*MIN;
-  if(type==='hide'){ p.hidden=pick(Object.keys(SPOTS).filter(k=>(p.stage!=='baby'||SPOTS[k].left)&&k!==p.lastHideSpot)); p.lastHideSpot=p.hidden; p.lastHideAt=t; }
+  if(type==='hide'){ p.hidden=pick(p.outside?Object.keys(ST_SPOTS).filter(k=>k!==p.lastHideSpot):Object.keys(SPOTS).filter(k=>(p.stage!=='baby'||SPOTS[k].left)&&k!==p.lastHideSpot)); p.lastHideSpot=p.hidden; p.lastHideAt=t; }
   p.ev={type,since:t,deadline:t+(type==='nap'?3:type==='hide'?8:4)*MIN};
 }
 function resolveEv(p,type){
@@ -424,7 +425,7 @@ function step(p,t){
   if(p.asleep||st==='baby'){p.nextPoop+=MIN;p.nextCall+=MIN;}
   else{
     if(t>=p.nextPoop){ addMess(p); p.nextPoop=t+rnd(R.poop[0],R.poop[1])*MIN; }
-    if(!p.outside&&!p.ev&&!p.call&&t-(p.lastHideAt||0)>=15*MIN&&Math.random()<1/240){ startEv(p,'hide',t); }
+    if(!p.ev&&!p.call&&t-(p.lastHideAt||0)>=15*MIN&&Math.random()<(p.outside?1/120:1/240)){ startEv(p,'hide',t); }
     if(!p.call&&!p.ev&&t>=p.nextCall){ startEv(p,'caprice',t); p.ev.deadline=t+20*MIN; p.nextCall=t+rnd(R.call[0],R.call[1])*MIN; }
   }
   if(p.call&&t-p.call.since>CARE.callTimeout){p.call=null;s.disc=clamp(s.disc-10);if(st!=='baby')p.mistakes++;}
@@ -449,7 +450,8 @@ function step(p,t){
     }
   }
   relStep(p,t);
-  if(p.outside&&(p.asleep||p.hidden)) p.outside=false;
+  if(p.outside&&p.asleep) p.outside=false;
+  if(!p.outside&&p.hidden&&ST_SPOTS[p.hidden]) p.hidden=null;
   track(p,'hunger',t); track(p,'happy',t);
   let dh=0; if(s.hunger<=0)dh-=8; if(p.sick)dh-=6; if(!dh)dh=s.hunger>50?8:4;
   s.health=clamp(s.health+dh*k);
@@ -543,7 +545,7 @@ function forecast(fromNow){
   const EMO={cat:'🐱',dog:'🐶',hamster:'🐹',lifter:'🏋️',trainer:'💪',office:'💼',student:'🎓',zoomer:'📱',alpha:'🧒'}[p0.type]||'';
   return notes.filter(n=>n.at>=fromNow).map(n=>n.third?{at:n.at,text:n.text}:{at:n.at,text:n.text,who:(EMO+' '+nm).trim()});
 }
-window.__beregiForecast=forecast; window.__beregiDbg={S:()=>S,setS:x=>{S=x;},act:(...a)=>act(...a),simulate:()=>simulate(),needs:p=>needs(p),tapSpot:k=>tapSpot(k),resolveEv:(p,t)=>resolveEv(p,t)}; window.__beregiChar=(...a)=>charSVG(...a); window.__beregiWear=()=>WEAR; window.__beregiHairs=()=>HAIRS;
+window.__beregiForecast=forecast; window.__beregiDbg={S:()=>S,setS:x=>{S=x;},act:(...a)=>act(...a),simulate:()=>simulate(),needs:p=>needs(p),tapSpot:k=>tapSpot(k),tapStreet:k=>tapStreet(k),resolveEv:(p,t)=>resolveEv(p,t)}; window.__beregiChar=(...a)=>charSVG(...a); window.__beregiWear=()=>WEAR; window.__beregiHairs=()=>HAIRS;
 let syncTimer=null;
 function tgInit(){ try{ return (window.Telegram&&Telegram.WebApp&&Telegram.WebApp.initData)||''; }catch(e){ return ''; } }
 function syncNow(hidden){
@@ -1483,7 +1485,7 @@ function greetBack(p,r){
 }
 function goOut(p,viaWardrobe){
   if(p.asleep){p.msg='Ночью на улицу нельзя, он спит.';return;}
-  p.outside=true; const r=rel(p);
+  p.outside=true; p.stX=206; camX=0; const r=rel(p);
   if(viaWardrobe&&!p.foundSecret){ p.foundSecret=true; p.msg='Шкаф скрипнул и открылся… а за ним дверь на улицу!'; sfx('evo'); }
   else p.msg='Вышел на улицу.';
   if(greetBack(p,r)) return;
@@ -1528,7 +1530,7 @@ function relSay(a,r){
 }
 function relAct(p,a){
   p.msgRaw=true;
-  if(a==='home'){ p.outside=false; p.msg=fem('Вернулся домой.',p.sex); sfx('click'); return; }
+  if(a==='home'){ if(p.hidden&&ST_SPOTS[p.hidden]){ p.msg='Сначала найди его! Он где-то тут прячется.'; sfx('no'); return; } p.outside=false; view='main'; camX=null; p.msg=fem('Вернулся домой.',p.sex); sfx('click'); return; }
   const r=rel(p);
   if(r.left){ p.msg='Тут никого нет.'; sfx('no'); return; }
   if(romance(r)&&a==='kiss'&&r.love<40){ r.love=Math.max(0,r.love-5); p.msg=r.name+(r.fem?' отвернулась':' отвернулся')+'. Рано ещё, сначала цветы и внимание.'; sfx('no'); return; }
@@ -1549,7 +1551,7 @@ function npcSVG(r,happy){
   if(r.kind==='hammate') return hamster('adult','x',happy?'happy':'normal',0,{fem:r.fem,breed:breedOf('hamster',r.breed)});
   if(r.kind==='dogmate') return dog('adult','x',happy?'happy':'normal',0,{fem:r.fem,breed:breedOf('dog',r.breed)});
   const look={girl:{hair:'#7a3e1f',top:'#f29ac8',dress:true,long:true},boy:{hair:'#3a2c22',top:'#5b8def'},spotter:r.fem?{hair:'#8a5a2b',top:'#2f5fb0',pony:true}:{hair:'#2f2a24',top:'#2f5fb0'},friend:{hair:'#2f2a24',top:'#5bb6e8',cap:true},gfriend:{hair:'#e8c46a',top:'#f2c14e',pony:true},
-              owner:{hair:'#5a4636',top:'#7bbf8a'},dogowner:{hair:'#3a2c22',top:'#e8a25a',cap:true},hamowner:{hair:'#c98b4a',top:'#f29ac8'},parent:r.fem?{hair:'#8a5a2b',top:'#c8a0e8',dress:true,bun:true}:{hair:'#4a3a2c',top:'#6aa6d8'}}[r.kind];
+              owner:{hair:'#5a4636',top:'#7bbf8a'},postman:{hair:'#5a4636',top:'#3b6fd4',cap:true},granny:{hair:'#c9cfd6',top:'#c8a0e8',dress:true,bun:true},kid:{hair:'#e8c46a',top:'#f2c14e'},dogowner:{hair:'#3a2c22',top:'#e8a25a',cap:true},hamowner:{hair:'#c98b4a',top:'#f29ac8'},parent:r.fem?{hair:'#8a5a2b',top:'#c8a0e8',dress:true,bun:true}:{hair:'#4a3a2c',top:'#6aa6d8'}}[r.kind];
   if(look.long) g+=`<path d="M-30 ${hy-4} Q-36 ${hy+40} -24 ${hy+48} L24 ${hy+48} Q36 ${hy+40} 30 ${hy-4} Z" fill="${look.hair}" ${st}/>`;
   g+=`<rect x="-14" y="-28" width="9" height="26" rx="4" fill="${look.dress?skin:'#3b4a6b'}" ${st}/><rect x="5" y="-28" width="9" height="26" rx="4" fill="${look.dress?skin:'#3b4a6b'}" ${st}/>`;
   g+=`<ellipse cx="-10" cy="-2" rx="9" ry="4.5" fill="${OUT}"/><ellipse cx="10" cy="-2" rx="9" ry="4.5" fill="${OUT}"/>`;
@@ -1566,24 +1568,106 @@ function npcSVG(r,happy){
   if(r.flowersUntil>Date.now()) g+=`<g transform="translate(34 -40)"><path d="M0 0 v18" stroke="#4caf7d" stroke-width="3"/><circle cx="-5" cy="-3" r="5" fill="#e8584f" ${st}/><circle cx="5" cy="-3" r="5" fill="#f2c14e" ${st}/><circle cx="0" cy="-9" r="5" fill="#f29ac8" ${st}/></g>`;
   return g;
 }
+const ST_SPOTS={st_tree:{x:400,name:'за деревом',obj:'tree'},st_pond:{x:606,name:'в камышах',obj:'pond'},st_kiosk:{x:772,name:'за киоском',obj:'shop'},st_bench:{x:175,name:'под лавочкой',obj:'bench'}};
+const ST_X={tree:404,pond:520,bench:176,swing:925,shop:715,scales:872,pjt:820};
+const ST_ACT={
+  cat:{tree:'Залез на дерево и гордо смотрит сверху 🌳',pond:'Смотрит на уток. Утки смотрят на него. Напряжённо.',bench:'Сидит на спинке лавочки и умывается',swing:'Поймал бабочку! И отпустил. Почти.'},
+  dog:{tree:'Роет яму под деревом. Что-то нашёл!',pond:'Плюх! Плавает в пруду и счастлив 💦',bench:'Гоняет голубей у лавочки',swing:'Носится вокруг качелей'},
+  hamster:{tree:'Прячет семечку под корнями',pond:'Осторожно нюхает воду',bench:'Бегает в траве у лавочки',swing:'Катается на качелях, держится щёчками'},
+  lifter:{tree:'Разминка в тени дерева',pond:'Смотрит на воду и думает о новом рекорде',bench:'Отдыхает на лавочке после тренировки',swing:'Качели жалобно скрипят под таким весом 😅'},
+  trainer:{tree:'Пробежка по парку! Круг вокруг дерева',pond:'Бегает вокруг пруда',bench:'Отжимания от лавочки',swing:'Растяжка у качелей'},
+  office:{tree:'Отдыхает в тени и не открывает почту',pond:'Кормит уток булочкой 🦆',bench:'Сидит на лавочке с кофе ☕',swing:'Качается и забыл про отчёт'},
+  student:{tree:'Читает под деревом',pond:'Кормит уток вместо подготовки к сессии',bench:'Читает конспект на лавочке 📖',swing:'Качается и зубрит билеты'},
+  zoomer:{tree:'Снимает видео «эстетика осени»',pond:'Селфи с утками 📱',bench:'Сидит на лавочке в телефоне',swing:'Снимает видео на качелях'},
+  alpha:{tree:'Ищет жуков под деревом',pond:'Пускает кораблик',bench:'Прыгает по лавочке',swing:'Качели! Выше! Ещё выше! 🎢'}};
+function treats(p){ const T=[['icecream','Мороженое 🍦',2],['pie','Пирожок 🥟',2]];
+  T.push(p.type==='cat'?['fish','Рыбка 🐟',2]:p.type==='dog'?['bone','Косточка 🦴',2]:p.type==='hamster'?['seeds','Семечки 🌻',1]:(p.type==='lifter'||p.type==='trainer')?['bar','Протеиновый батончик',2]:['candy','Леденец 🍭',1]); return T; }
+const shopOpen=t=>{ const h=new Date(t).getHours(); return h>=8&&h<22; };
+function hashN(str){ let h=2166136261; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return (h>>>0)/4294967296; }
+const isRain=t=>{ const d=new Date(t); return !isNight(t)&&hashN('rain'+d.toDateString()+d.getHours())<.18; };
+function streetFinds(p){ const d=dayKey(Date.now()); if(!S.finds||S.finds.day!==d){ const L=[]; const n=1+(Math.random()<.5?1:0); for(let i=0;i<n;i++){ const r=Math.random(); L.push({x:Math.round(rnd(90,940)),kind:r<.12?'item':(hwOn(Date.now())&&r<.45)?'pumpkin':'coin',got:false}); } S.finds={day:d,list:L}; } return S.finds; }
+function encounter(p){ const t=Date.now(), hk=dayKey(t)+new Date(t).getHours(); if(S.encKey!==hk){ S.encKey=hk; p.enc=Math.random()<.45?{kind:pick(['stray','postman','granny','kid']),x:pick([300,330,630]),done:false}:null; } return p.enc&&!p.enc.done?p.enc:null; }
+const ENC={stray:{title:'Бездомный кот смотрит голодными глазами',a:['Угостить','поделиться'],b:['Пройти мимо','не сейчас']},
+  postman:{title:'Почтальон: «Вам письмо!»',a:['Взять письмо','что там?'],b:['Не брать','потом']},
+  granny:{title:'Бабушка с пирожками: «Угостись, милок!»',a:['Взять пирожок','спасибо!'],b:['Вежливо отказаться','я сыт']},
+  kid:{title:'Мальчишка с мячом: «Сыграем?»',a:['Поиграть в мяч','давай!'],b:['Не сейчас','в другой раз']}};
+function encChoice(p,yes){ const e=p.enc; if(!e) return; e.done=true; view='main'; p.msgRaw=true; const s=p.stats;
+  if(!yes){ p.msg=e.kind==='granny'?'Бабушка: «Какой воспитанный!»':'Пошли дальше.'; if(e.kind==='granny') s.disc=clamp(s.disc+5); sfx('click'); return; }
+  if(e.kind==='stray'){ s.happy=clamp(s.happy+15); p.msg='Бездомный кот мурчит и трётся о ноги. На душе тепло.'; }
+  if(e.kind==='postman'){ const g=earnFree(1,'письмо от почтальона'); p.msg=g?'Письмо! Внутри открытка и монетка 💌':'Письмо! Внутри открытка с котиком 💌'; }
+  if(e.kind==='granny'){ s.hunger=clamp(s.hunger+25); p.msg='Пирожок с капустой. Вкусно, как в детстве 🥟'; resolveEv(p,'hungry'); }
+  if(e.kind==='kid'){ s.happy=clamp(s.happy+20); p.msg='Гоняли мяч по двору. Гол! ⚽'; resolveEv(p,'bored'); }
+  p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; sfx('happy'); }
+function buyTreat(p,id){ const it=treats(p).find(x=>x[0]===id); if(!it) return; view='main'; p.msgRaw=true;
+  if((S.coins||0)<it[2]){ p.msg='Не хватает монет: нужно '+it[2]+'.'; sfx('no'); return; }
+  S.coins-=it[2]; p.stats.happy=clamp(p.stats.happy+30); p.stats.hunger=clamp(p.stats.hunger+10); resolveEv(p,'bored');
+  const r=p.rels&&p.rels[relKind(p)]; if(r&&r.met&&!r.left){ r.love=Math.min(100,r.love+10); }
+  p.msg=it[1].replace(/\s*\p{Extended_Pictographic}.*$/u,'')+'! '+(r&&r.met&&!r.left?'Поделился с '+r.name+'. Оба довольны.':'Вкуснотища.'); p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; sfx('eat'); }
+function tapStreet(k){
+  simulate(); const p=S.pet; if(!p||mg||!p.outside) return; p.msgRaw=true; const t=Date.now();
+  if(k.startsWith('find:')){ const F=streetFinds(p), f=F.list[+k.slice(5)]; if(!f||f.got) return; f.got=true; p.stX=f.x;
+    if(f.kind==='pumpkin'){ S.pumpkins=(S.pumpkins||0)+1; p.msg='В траве лежала тыква! +1 🎃'; }
+    else if(f.kind==='item'){ const tabs=CH[p.type].human?['hat','glasses','neck']:['hat','glasses','neck']; const pool=[]; tabs.forEach(tb=>Object.keys(WEAR[tb]).forEach(id=>{ if(!owns(tb,id)&&!RARE[tb+':'+id]&&!(tb==='neck'&&id==='collar'&&CH[p.type].human)) pool.push([tb,id]); }));
+      if(pool.length){ const [tb,id]=pick(pool); S.owned=(S.owned||[]).concat([tb+':'+id]); p.msg='Под кустом нашлось: '+WEAR[tb][id]+'! Теперь это твоё, загляни в «стиль».'; } else { earnFree(1,'находка'); p.msg='Нашёл монетку!'; } }
+    else { const g=earnFree(1,'находка на улице'); p.msg=g?'Нашёл монетку! +1':'Нашёл монетку, но лимит бесплатных монет на неделе уже набран.'; }
+    sfx('happy'); save(); render(); return; }
+  if(k==='enc'){ if(encounter(p)){ view='enc'; sfx('click'); } render(); return; }
+  if(p.hidden&&ST_SPOTS[p.hidden]){ const sp=ST_SPOTS[p.hidden];
+    if(sp.obj===k){ p.hidden=null; p.lastHideAt=t; p.stX=sp.x; p.stats.happy=clamp(p.stats.happy+25); p.msg='Нашёл! Он прятался '+sp.name+' и хихикает.'; resolveEv(p,'hide'); sfx('happy'); }
+    else { p.msg='Тут его нет. Ищи дальше.'; sfx('no'); }
+    save(); render(); return; }
+  if(k==='shop'){ if(!shopOpen(t)){ p.msg='Магазин закрыт. Работает с 8:00 до 22:00.'; sfx('no'); } else { view='shop'; p.stX=ST_X.shop+40; sfx('click'); } render(); return; }
+  if(k==='scales'){ p.stX=ST_X.scales; const w=weightText(p); if(p.type==='lifter'&&p.stage!=='baby'){ const c=CH.lifter, kg=(isF(p)?c.baseF:c.base)+p.extra, cap=isF(p)?c.catF:c.cat;
+      p.msg='Весы у аптеки: '+kg.toFixed(1).replace('.',',')+' кг. '+(kg<=cap?'Категория до '+cap+' — влезаешь ✅':'Перевес '+(kg-cap).toFixed(1).replace('.',',')+' кг! До категории '+cap+' надо сгонять ⚠️')+(p.meetAt?' До соревнований '+dur(Math.max(0,p.meetAt-t))+'.':''); }
+    else p.msg='Весы у аптеки показывают '+w+'.'; sfx('click'); save(); render(); return; }
+  if(k==='pjt'){ p.stX=ST_X.pjt; if(p.type==='lifter'){ p.outside=false; camX=null; view='style'; styleTab='pjt'; styleSel=null; styleNote='Добро пожаловать в магазин ПЖТ!'; p.msg='Зашли в магазин ПЖТ.'; }
+    else p.msg='Витрина ПЖТ: пояса, бинты и трико для лифтёров.'; sfx('click'); save(); render(); return; }
+  const A=ST_ACT[p.type]||ST_ACT.cat; if(!A[k]) return;
+  p.stX=ST_X[k]; p.stCd=p.stCd||{};
+  if(t-(p.stCd[k]||0)<15*MIN){ p.msg=A[k]+'. Уже было недавно, попробуй что-то другое.'; sfx('click'); save(); render(); return; }
+  p.stCd[k]=t; p.stats.happy=clamp(p.stats.happy+8); p.msg=A[k]+'.'.replace(/^\.$/, ''); p.msg=A[k]; if(p.stats.happy>40) resolveEv(p,'bored'); p.pop=(p.pop||0)+1; p.reactUntil=t+2500; sfx('happy'); save(); render();
+}
 function streetSVG(p,m,fat){
-  const night=isNight(Date.now()), r=rel(p), sky=night?'#2a3566':'#bfe3ff';
-  let s=`<svg viewBox="0 0 320 220" role="img" aria-label="Улица">`;
-  s+=`<rect width="320" height="220" fill="${sky}"/>`;
-  s+=night?`<circle cx="270" cy="34" r="12" fill="#fff6c8"/>`:`<circle cx="270" cy="34" r="14" fill="#ffd25e"/>`;
-  s+=`<rect y="176" width="320" height="44" fill="#9fd08a"/><rect y="186" width="320" height="10" fill="#c9b79a"/>`;
-  s+=`<g stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"><rect x="0" y="60" width="62" height="130" fill="#e3c9a8"/><path d="M-4 64 L31 34 L66 64 Z" fill="#c96a5e"/><rect x="18" y="122" width="28" height="64" rx="3" fill="#a8733f" data-door="1"/></g><circle cx="40" cy="156" r="2.5" fill="${OUT}"/>`;
-  s+=`<rect x="14" y="118" width="36" height="72" fill="transparent" data-door="1" style="cursor:pointer"/>`;
-  s+=`<g stroke="${OUT}" stroke-width="2.5"><rect x="272" y="120" width="12" height="70" fill="#8a5a2b"/><circle cx="278" cy="102" r="32" fill="#6cbf6a"/><circle cx="258" cy="116" r="18" fill="#6cbf6a"/><circle cx="298" cy="114" r="18" fill="#6cbf6a"/></g>`;
-  s+=`<g stroke="${OUT}" stroke-width="2.5"><rect x="140" y="160" width="70" height="8" rx="3" fill="#c9915a"/><path d="M146 168 v18 M204 168 v18" fill="none"/><rect x="140" y="146" width="70" height="7" rx="3" fill="#c9915a"/></g>`;
+  const t=Date.now(), h=new Date(t).getHours(), night=isNight(t), rain=isRain(t), eve=h>=18&&h<23, morn=h>=7&&h<10, r=rel(p), W2=WORLD;
+  const sky=night?'#2a3566':rain?'#9fb0c2':eve?'#f2b48a':morn?'#cfe6ff':'#bfe3ff', st=`stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"`;
+  let s=`<svg viewBox="${camX||0} 0 ${VIEW} 220" role="img" aria-label="Улица">`;
+  s+=`<rect width="${W2}" height="220" fill="${sky}"/>`;
+  if(night){ for(let i=0;i<30;i++) s+=`<circle cx="${(i*97)%W2}" cy="${10+(i*37)%70}" r="1.3" fill="#fff"/>`; s+=`<circle cx="860" cy="34" r="12" fill="#fff6c8"/>`; }
+  else if(rain) [[120,30],[420,24],[760,34]].forEach(([x,y])=>s+=`<g fill="#e3e8ee" ${st}><circle cx="${x}" cy="${y}" r="14"/><circle cx="${x+18}" cy="${y-6}" r="17"/><circle cx="${x+38}" cy="${y}" r="13"/></g>`);
+  else s+=`<circle cx="${eve?820:860}" cy="${eve?60:34}" r="14" fill="${eve?'#ff9a52':'#ffd25e'}"/>`;
+  s+=`<rect y="176" width="${W2}" height="44" fill="${rain?'#8fbf7d':'#9fd08a'}"/><rect y="186" width="${W2}" height="10" fill="#c9b79a"/>`;
+  // зона 1: дом, лавочка, фонарь
+  s+=`<g ${st}><rect x="0" y="60" width="62" height="130" fill="#e3c9a8"/><path d="M-4 64 L31 34 L66 64 Z" fill="#c96a5e"/><rect x="18" y="122" width="28" height="64" rx="3" fill="#a8733f" data-door="1"/></g><circle cx="40" cy="156" r="2.5" fill="${OUT}"/><rect x="14" y="118" width="36" height="72" fill="transparent" data-door="1" style="cursor:pointer"/>`;
+  s+=`<g data-st="bench" style="cursor:pointer"><g ${st}><rect x="140" y="160" width="70" height="8" rx="3" fill="#c9915a"/><path d="M146 168 v18 M204 168 v18" fill="none"/><rect x="140" y="146" width="70" height="7" rx="3" fill="#c9915a"/></g><rect x="134" y="140" width="82" height="50" fill="transparent"/></g>`;
+  s+=`<g ${st}><path d="M290 190 v-90" fill="none"/><rect x="282" y="90" width="16" height="12" rx="3" fill="${eve||night||rain?'#ffe08a':'#e9eef3'}"/></g>`+(eve||rain?`<circle class="hwglow" cx="290" cy="96" r="18" fill="#ffd25e"/>`:'');
+  // зона 2: парк — дерево и пруд
+  s+=`<g data-st="tree" style="cursor:pointer"><g ${st}><rect x="396" y="110" width="16" height="80" fill="#8a5a2b"/><circle cx="404" cy="88" r="40" fill="${h>=7&&new Date(t).getMonth()>=8&&new Date(t).getMonth()<=10?'#e0a14a':'#6cbf6a'}"/><circle cx="376" cy="108" r="22" fill="${new Date(t).getMonth()>=8&&new Date(t).getMonth()<=10?'#d98c3a':'#6cbf6a'}"/><circle cx="432" cy="106" r="22" fill="${new Date(t).getMonth()>=8&&new Date(t).getMonth()<=10?'#c97a2e':'#6cbf6a'}"/></g><rect x="360" y="44" width="90" height="146" fill="transparent"/></g>`;
+  s+=`<g data-st="pond" style="cursor:pointer"><ellipse cx="530" cy="204" rx="78" ry="13" fill="#7cc4ea" stroke="${OUT}" stroke-width="2.5"/><path d="M596 200 v-22 M602 202 v-28 M608 200 v-20" stroke="#4c8a3c" stroke-width="3" stroke-linecap="round"/>`+
+     [[505,200],[548,206]].map(([x,y])=>`<g transform="translate(${x} ${y})"><ellipse cx="0" cy="-3" rx="8" ry="5" fill="#fff" stroke="${OUT}" stroke-width="1.5"/><circle cx="6" cy="-8" r="3.5" fill="#fff" stroke="${OUT}" stroke-width="1.5"/><path d="M9 -8 l4 1 l-4 1 z" fill="#f2a33a"/></g>`).join('')+`<rect x="450" y="180" width="170" height="40" fill="transparent"/></g>`;
+  // зона 3: магазин, ПЖТ, аптека с весами, качели
+  const open=shopOpen(t);
+  s+=`<g data-st="shop" style="cursor:pointer"><g ${st}><rect x="660" y="96" width="110" height="94" fill="#f4e3c3"/><path d="M654 96 h122 l-8 18 h-106 z" fill="#e8584f"/></g>`+[0,1,2,3,4,5].map(i=>`<path d="M${662+i*20} 96 h10 l-2 18 h-10 z" fill="#fff"/>`).join('')+
+     `<rect x="672" y="124" width="56" height="34" rx="2" fill="${open?'#bfe3ff':'#6b7a8f'}" stroke="${OUT}" stroke-width="2"/><rect x="738" y="132" width="22" height="58" fill="#a8733f" stroke="${OUT}" stroke-width="2"/><text x="700" y="174" text-anchor="middle" font-family="Rubik,sans-serif" font-weight="700" font-size="9" fill="${OUT}">${open?'УГОЩЕНИЯ':'ЗАКРЫТО'}</text>${open?'<text x="686" y="146" font-size="14">🍦</text><text x="704" y="146" font-size="14">🥟</text>':''}<rect x="654" y="92" width="122" height="98" fill="transparent"/></g>`;
+  s+=`<g data-st="pjt" style="cursor:pointer"><g ${st}><rect x="780" y="110" width="66" height="80" fill="#2a2a2e"/><rect x="788" y="128" width="50" height="40" fill="#e9eef3"/></g><text x="813" y="124" text-anchor="middle" font-family="Arial" font-weight="900" font-size="11" fill="#e8584f">ПЖТ</text><rect x="796" y="140" width="34" height="8" fill="#1e1e24"/><rect x="808" y="141" width="10" height="6" fill="#c9cfd6"/><path d="M800 152 h26 v12 h-26 z" fill="#c43c35"/><rect x="776" y="106" width="74" height="86" fill="transparent"/></g>`;
+  s+=`<g data-st="scales" style="cursor:pointer"><g ${st}><rect x="852" y="132" width="40" height="58" fill="#f7f7f2"/><path d="M866 140 h12 M872 134 v12" stroke="#4caf7d" stroke-width="4"/></g><g ${st}><rect x="858" y="182" width="28" height="8" rx="2" fill="#9aa0a6"/><circle cx="872" cy="166" r="8" fill="#fff"/></g><path d="M872 166 l4 -5" stroke="#e8584f" stroke-width="2"/><rect x="848" y="128" width="48" height="66" fill="transparent"/></g>`;
+  s+=`<g data-st="swing" style="cursor:pointer"><g ${st} fill="none"><path d="M904 190 l10 -70 h24 l10 70"/><path d="M920 120 v44 M932 120 v44"/></g><rect x="916" y="162" width="20" height="5" rx="2" fill="#e8584f" stroke="${OUT}" stroke-width="2"/><rect x="898" y="116" width="58" height="76" fill="transparent"/></g>`;
+  if(hwOn(t)) s+=`<g transform="translate(84 190)"><rect x="-7" y="-22" width="14" height="22" rx="2" fill="#3a3f4a" stroke="${OUT}" stroke-width="2"/><rect x="-4" y="-18" width="8" height="12" fill="#ffd25e" class="hwglow"/><path d="M-9 -22 h18 l-9 -8 z" fill="#3a3f4a" stroke="${OUT}" stroke-width="2"/></g><path d="M470 40 q-6 -6 -12 -2 q4 2 4 6 q4 -3 8 0 q4 -3 8 0 q0 -4 4 -6 q-6 -4 -12 2 z" fill="#2a2a2e"/>`;
+  // находки
+  streetFinds(p).list.forEach((f,i)=>{ if(f.got) return; s+=`<g data-st="find:${i}" style="cursor:pointer"><circle class="hwglow" cx="${f.x}" cy="186" r="12" fill="#fff6c8"/><polygon transform="translate(${f.x} 186)" points="0,-7 2,-2 7,0 2,2 0,7 -2,2 -7,0 -2,-2" fill="#f2c14e" stroke="${OUT}" stroke-width="1.2"/><circle cx="${f.x}" cy="186" r="20" fill="transparent"/></g>`; });
+  // прохожий
+  const e=encounter(p); if(e){ const ek={stray:'catmate',postman:'postman',granny:'granny',kid:'kid'}[e.kind];
+    s+=`<g data-st="enc" style="cursor:pointer"><g transform="translate(${e.x} 196) scale(${e.kind==='kid'?.7:.8})">${e.kind==='stray'?cat('adult','x','normal',0,{breed:breedOf('cat','grey')}):npcSVG({kind:ek,fem:e.kind==='granny'},false)}</g><g transform="translate(${e.x+16} ${e.kind==='stray'?108:e.kind==='kid'?96:80})"><circle r="11" fill="#fff" stroke="${OUT}" stroke-width="2"/><text y="5" text-anchor="middle" font-family="Rubik,sans-serif" font-weight="700" font-size="14" fill="#7a5cc4">!</text></g><rect x="${e.x-30}" y="90" width="60" height="106" fill="transparent"/></g>`; }
+  // пара / хозяин
   if(!r.left&&r.name!==undefined) s+=`<g transform="translate(${/mate$/.test(r.kind)?100:118} 196) scale(${/mate$/.test(r.kind)?-.9:.9} .9)">${npcSVG(r,r.love>=60||Date.now()<(p.reactUntil||0))}</g>`;
   if(!r.left&&!r.wants&&r.mate&&r.task&&!r.couple) s+=`<g transform="translate(140 ${r.kind==='dogmate'||r.kind==='catmate'?96:72})"><circle r="14" fill="#fff" stroke="${OUT}" stroke-width="2.5"/><text y="7" text-anchor="middle" font-family="Rubik,sans-serif" font-weight="700" font-size="18" fill="#7a5cc4">!</text></g>`;
   if(!r.left&&r.couple) s+=`<text x="160" y="92" text-anchor="middle" font-family="Rubik,sans-serif" font-weight="700" font-size="22" fill="#e8584f" class="stink">♥</text>`;
   if(!r.left&&r.wants) s+=`<g transform="translate(140 72)"><circle r="14" fill="#fff" stroke="${OUT}" stroke-width="2.5"/><text y="6" text-anchor="middle" font-family="Rubik,sans-serif" font-weight="700" font-size="18" fill="#e8584f">♥</text></g>`;
-  if(hwOn(Date.now())) s+=`<g transform="translate(84 190)"><rect x="-7" y="-22" width="14" height="22" rx="2" fill="#3a3f4a" stroke="${OUT}" stroke-width="2"/><rect x="-4" y="-18" width="8" height="12" fill="#ffd25e" class="hwglow"/><path d="M-9 -22 h18 l-9 -8 z" fill="#3a3f4a" stroke="${OUT}" stroke-width="2"/></g><path d="M200 40 q-6 -6 -12 -2 q4 2 4 6 q4 -3 8 0 q4 -3 8 0 q0 -4 4 -6 q-6 -4 -12 2 z" fill="#2a2a2e"/>`;
-  const sc=p.stage==='teen'?.85:.95;
-  s+=`<g transform="translate(206 196) scale(${-sc} ${sc})"><g class="hop">${charSVG(p.type,p.stage,p.stage==='teen'?p.teenForm:p.form,m,fat,p.sex,p.breed,p.look)}</g></g>`;
-  if(night) s+=`<rect width="320" height="220" fill="#0e1733" opacity=".35"/>`;
+  // сам питомец
+  if(!p.hidden){ const sc=p.stage==='teen'?.85:.95, x=p.stX||206;
+    s+=`<g transform="translate(${x} 196) scale(${-sc} ${sc})" style="pointer-events:none"><g class="hop">${charSVG(p.type,p.stage,p.stage==='teen'?p.teenForm:p.form,m,fat,p.sex,p.breed,p.look)}</g></g>`; }
+  if(rain){ let d=''; for(let i=0;i<70;i++){ const x=(i*53)%W2, y=(i*29)%170; d+=`M${x} ${y} l-4 10 `; } s+=`<path class="rain" d="${d}" stroke="#5b7fa5" stroke-width="1.5" opacity=".6" pointer-events="none"/>`; }
+  if(night) s+=`<rect width="${W2}" height="220" fill="#0e1733" opacity=".35" pointer-events="none"/>`;
+  else if(eve) s+=`<rect width="${W2}" height="220" fill="#7a3c5a" opacity=".12" pointer-events="none"/>`;
   return s+`</svg>`;
 }
 
@@ -1611,15 +1695,15 @@ function needs(p){
   return n;
 }
 let sceneKey='', camX=null, camAnim=null;
-function petToView(p){ if(!p||p.outside||p.hidden||camX===null) return; if(walkX<camX+50||walkX>camX+VIEW-50) panTo(walkX-VIEW/2); }
-function applyCam(){ if(S.pet&&S.pet.outside) return; const mx=camMax(S.pet), mn=camMin(S.pet); if(camX>mx) camX=mx; if(camX<mn) camX=mn; const sv=$('scene').querySelector('svg'); if(sv) sv.setAttribute('viewBox',camX+' 0 '+VIEW+' 220'); }
+function petToView(p){ if(!p||p.hidden||camX===null) return; if(p.outside){ const x=p.stX||206; if(x<camX+40||x>camX+VIEW-40) panTo(x-VIEW/2); return; } if(walkX<camX+50||walkX>camX+VIEW-50) panTo(walkX-VIEW/2); }
+function applyCam(){ const mx=camMax(S.pet), mn=camMin(S.pet); if(camX>mx) camX=mx; if(camX<mn) camX=mn; const sv=$('scene').querySelector('svg'); if(sv) sv.setAttribute('viewBox',camX+' 0 '+VIEW+' 220'); }
 function panTo(x){ cancelAnimationFrame(camAnim); const from=camX,to=Math.max(camMin(S.pet),Math.min(camMax(S.pet),x)),t0=performance.now();
   const f=now=>{const k=Math.min(1,(now-t0)/350),e=1-Math.pow(1-k,3); camX=from+(to-from)*e; applyCam(); if(k<1) camAnim=requestAnimationFrame(f);}; camAnim=requestAnimationFrame(f); }
 function setupPan(){
   const el=$('scene'); let sx=null,sc=0,moved=false,downT=null;
   el.addEventListener('pointerdown',e=>{ sx=e.clientX; sc=camX||0; moved=false; downT=e.target; cancelAnimationFrame(camAnim); try{el.setPointerCapture(e.pointerId);}catch(_){} });
   el.addEventListener('pointermove',e=>{ if(sx===null) return; const dx=e.clientX-sx; if(Math.abs(dx)>6) moved=true; if(moved){ const w=el.getBoundingClientRect().width||VIEW; camX=Math.max(camMin(S.pet),Math.min(camMax(S.pet),sc-dx*VIEW/w)); applyCam(); } });
-  const end=e=>{ if(sx===null) return; const wasMoved=moved; sx=null; if(!wasMoved){ const sp=downT&&downT.closest&&downT.closest('[data-spot]'); if(sp) tapSpot(sp.dataset.spot); else if(downT&&downT.closest&&downT.closest('[data-door]')&&S.pet&&S.pet.outside){ relAct(S.pet,'home'); save(); render(); } } };
+  const end=e=>{ if(sx===null) return; const wasMoved=moved; sx=null; if(!wasMoved){ const sp=downT&&downT.closest&&downT.closest('[data-spot]'); if(sp) tapSpot(sp.dataset.spot); else if(downT&&downT.closest&&downT.closest('[data-st]')&&S.pet&&S.pet.outside) tapStreet(downT.closest('[data-st]').dataset.st); else if(downT&&downT.closest&&downT.closest('[data-door]')&&S.pet&&S.pet.outside){ relAct(S.pet,'home'); save(); render(); } } };
   el.addEventListener('pointerup',end); el.addEventListener('pointercancel',()=>{sx=null;});
 }
 function tickWalk(p,m){
@@ -1634,7 +1718,7 @@ function drawPet(move){
   const key=[p.type,p.breed,JSON.stringify(p.look||{}),p.sex,p.stage,p.form,p.teenForm,m,fat,p.poop,(p.messX||[]).join(','),p.hidden,p.asleep,p.light,!!p.call,evo,hwOn(Date.now())&&S.hunt?S.hunt.day+S.hunt.found.join(','):''].join('|');
   const el=$('scene');
   if(camX===null||camX<camMin(p)||camX>camMax(p)) camX=Math.max(camMin(p),Math.min(camMax(p),p.stage==='baby'?320:walkX-VIEW/2));
-  if(p.outside){ const r=rel(p); const k2='out|'+key+'|'+r.kind+r.name+r.left+r.wants+(r.flowersUntil>Date.now())+(Date.now()<(p.reactUntil||0))+(r.love>=60)+(r.task?r.task.type:'')+r.couple; if(k2!==sceneKey){ el.innerHTML=streetSVG(p,m,fat); sceneKey=k2; } return; }
+  if(p.outside){ const r=rel(p), t=Date.now(), F=streetFinds(p), E=encounter(p); const k2='out|'+key+'|'+r.kind+r.name+r.left+r.wants+(r.flowersUntil>t)+(t<(p.reactUntil||0))+(r.love>=60)+(r.task?r.task.type:'')+r.couple+'|'+new Date(t).getHours()+isRain(t)+'|'+F.list.map(f=>f.got).join()+'|'+(E?E.kind+E.x:'')+'|'+(p.stX||206)+'|'+p.hidden; if(k2!==sceneKey){ el.innerHTML=streetSVG(p,m,fat); sceneKey=k2; applyCam(); } return; }
   if(key!==sceneKey){ el.innerHTML=sceneSVG(p,m,fat,evo); sceneKey=key; applyCam(); }
   const mv=document.getElementById('mover'), fl=document.getElementById('flip'), sc=p.stage==='teen'?.9:1;
   if(mv) mv.style.transform=`translate(${walkX}px,196px)`;
@@ -1720,7 +1804,15 @@ function render(){
     callOut(p,n);
     let html='';
     if(mg){ html=''; }
+    else if(p.outside&&view==='shop'){
+      html=treats(p).map(([id,n,pr])=>`<button class="btn" data-sh="${id}">${n}<small>${pr} ${coinWord(pr)} · у тебя ${S.coins||0}</small></button>`).join('')+`<button class="btn" data-a="back">Назад</button>`;
+    }
+    else if(p.outside&&view==='enc'&&p.enc&&!p.enc.done){
+      const E=ENC[p.enc.kind]; $('say').textContent=E.title;
+      html=`<button class="btn" data-en="1" style="grid-column:span 2">${E.a[0]}<small>${E.a[1]}</small></button><button class="btn" data-en="0">${E.b[0]}<small>${E.b[1]}</small></button>`;
+    }
     else if(p.outside){
+      if(view!=='main') view='main';
       const r=rel(p); if(greetBack(p,r)){ save(); $('say').textContent=p.msg; }
       if(!r.name&&!r.left) html=`<div class="namebox"><label for="relName">${relAsk(r)}</label><input id="relName" maxlength="16" autocomplete="off" placeholder="Имя"><div class="err" id="relErr"></div><button class="btn wide" data-r="name" type="button">Познакомиться</button></div><button class="btn wide" data-r="home">Домой<small>в дверь</small></button>`;
       else html=(r.mate&&!r.left?`<div class="tasknote">${r.couple?'♥ Пара. Не забывай про них.':(r.soul?'Родственная душа. ':'')+(r.task?esc(r.name)+' хочет: «'+taskText(p,r)+'»':'')+(r.couple?'':' · желаний исполнено '+r.tasksDone+' из '+r.tasksNeed)}</div>`:'')+REL_ACTS[r.kind].map(([k,t,sm])=>`<button class="btn" data-r="${k}" ${r.left?'disabled':''}>${t}<small>${sm}</small></button>`).join('')
@@ -1752,7 +1844,7 @@ function render(){
         ${(()=>{const T=totInfo(p,Date.now());return T&&Date.now()>=T.at&&Date.now()<T.until&&S.tot!==T.key&&!p.asleep&&view!=='status'?'<button class="btn wide" data-a="tot">🚪 Тук-тук! Открыть дверь</button>':'';})()}${p.type==='lifter'&&p.meetOpen&&view!=='status'?'<button class="btn wide" data-a="meet">🏆 Выступить на соревнованиях</button>':''}<button class="btn wide" data-a="status">${view==='status'?'Назад к нему':'Состояние'}</button>`;
     }
     if($('actions').dataset.h!==html){$('actions').innerHTML=html;$('actions').dataset.h=html;}
-    $('actions').querySelectorAll('button').forEach(x=>x.onclick=()=>{ if(x.dataset.r==='name'){ const v=($('relName').value||'').trim(); if(!v){ $('relErr').textContent='Напиши имя, чтобы познакомиться.'; return; } simulate(); if(S.pet){ nameRel(S.pet,v); save(); } render(); return; } if(x.dataset.r){ if(x.dataset.r!=='status2'){ simulate(); if(S.pet){ relAct(S.pet,x.dataset.r); save(); } render(); } } else act(x.dataset.a); });
+    $('actions').querySelectorAll('button').forEach(x=>x.onclick=()=>{ if(x.dataset.sh){ simulate(); if(S.pet){ buyTreat(S.pet,x.dataset.sh); save(); } render(); return; } if(x.dataset.en){ simulate(); if(S.pet){ encChoice(S.pet,x.dataset.en==='1'); save(); } render(); return; } if(x.dataset.r==='name'){ const v=($('relName').value||'').trim(); if(!v){ $('relErr').textContent='Напиши имя, чтобы познакомиться.'; return; } simulate(); if(S.pet){ nameRel(S.pet,v); save(); } render(); return; } if(x.dataset.r){ if(x.dataset.r!=='status2'){ simulate(); if(S.pet){ relAct(S.pet,x.dataset.r); save(); } render(); } } else act(x.dataset.a); });
   } else if(S.lastDead){
     const g=S.lastDead;
     if(lastDeadShown!==g.died){ if(lastDeadShown!==null||Date.now()-g.died<10*MIN) sfx('death'); lastDeadShown=g.died; }
