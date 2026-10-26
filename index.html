@@ -378,11 +378,35 @@ function dur(ms){const d=Math.floor(ms/DAY),h=Math.floor(ms%DAY/HOUR),m=Math.flo
 function esc(t){return String(t).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));}
 const ADULT_AT=3*DAY;
 /* ---- баланс ухода (все числа здесь) ---- */
+const MORPH={price:[15,20,25], wait:12*HOUR,
+  steps:{trainer:['Купить абонемент в зал','Пройти курс тренера','Первая тренировка с клиентом'],lifter:['Купить пояс','Купить наколенники','Первые соревнования'],
+    strongman:['Поднять первый камень','Протащить машину','Турнир силачей'],thai:['Купить перчатки','Сбор в тренировочном лагере','Первый бой'],
+    office:['Купить галстук','Купить ноутбук','Первый рабочий день'],student:['Подать документы','Сдать экзамены','Получить студенческий'],
+    zoomer:['Завести аккаунт','Купить кольцевую лампу','Первое вирусное видео'],alpha:['Купить планшет','Сходить в детский сад','Пойти в первый класс'],
+    cat:['Купить когтеточку','Научиться мурчать','Стать котом'],dog:['Купить ошейник','Научиться лаять','Стать псом'],hamster:['Купить колесо','Научиться набивать щёки','Стать хомяком']}};
+function RL(p){ return (p&&p.role)||(p&&p.type); }
+function bodyTitle(p){ const c=CH[p.type]; return (isF(p)&&c.titleF?c.titleF:c.title).toLowerCase(); }
+function morphTargets(p){ return ORDER.filter(t=>t!==RL(p)&&(!CH[p.type].human||CH[t].human)); }
+function weighIn(p){ if(p.type==='lifter'){ const c=CH.lifter, w=(isF(p)?c.baseF:c.base)+p.extra, cap=isF(p)?c.catF:c.cat; return {ok:w<=cap,text:w.toFixed(1).replace('.',',')+' кг',cap:'до '+cap+' кг',over:(w-cap).toFixed(1).replace('.',',')+' кг'}; }
+  return {ok:fatLevel(p)<2,text:weightText(p),cap:'без лишнего веса',over:'лишний вес'}; }
+function morphStep(p){ const M=p.morph; if(!M) return; const pr=MORPH.price[M.step];
+  if(Date.now()<(M.next||0)){ p.msg='Следующий шаг будет доступен через '+dur(M.next-Date.now())+'.'; sfx('no'); return; }
+  if((S.coins||0)<pr){ p.msg='Не хватает монет: нужно '+pr+', у тебя '+(S.coins||0)+'.'; sfx('no'); return; }
+  S.coins-=pr; const name=MORPH.steps[M.to][M.step]; M.step++; M.next=Date.now()+MORPH.wait;
+  if(M.step>=3){ p.role=M.to===p.type?null:M.to; p.morph=null; p.meetAt=null; p.meetOpen=null;
+    p.evoNote={title:p.name+(isF(p)?' теперь ':' теперь ')+(isF(p)&&CH[M.to].titleF?CH[M.to].titleF:CH[M.to].title).toLowerCase()+'!',why:'Последний шаг: «'+name+'». '+(isF(p)?'Она осталась':'Он остался')+' '+bodyTitle(p)+', но профессия новая.',hint:'Новая еда, новые игры и занятия на улице. Форма профессии — в «стиле» → «Форма», надевать по желанию.'};
+    p.msg='Превращение завершено! ✨'; sfx('evo'); }
+  else { p.msg='Шаг '+M.step+' из 3: «'+name+'». Следующий — через 12 часов.'; sfx('happy'); }
+  p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; }
+function todayDM(){ const d=new Date(); return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0'); }
+function bdayCheck(){ if(!S.bday||S.bday!==todayDM()) return; const y=new Date().getFullYear(); if(S.bdGift===y||bdayCheck.busy) return; bdayCheck.busy=true;
+  const give=()=>{ S.bdGift=y; S.owned=(S.owned||[]).concat(['hat:bday'+y]); S.bdNote=y; coinToast='🎁 Подарок на день рождения в «стиле» → Шапки'; coinToastAt=Date.now(); sfx('evo'); save(); render(); };
+  if(tgInit()) api('/bdgift').then(r=>{ bdayCheck.busy=false; if(r&&r.gift) give(); else if(r&&!r.error) S.bdGift=y; }); else { bdayCheck.busy=false; give(); } }
 const PAY={revive:[250,500,1000], eternal:5000, bedNights:12, bedStars:40};
 const CARE={missAfter:15*MIN, poopSickAfter:4*HOUR, sickWindow:48*HOUR, sickFatal:5, callTimeout:20*MIN, notifyGap:30*MIN, lifeMinusPerMiss:4*HOUR};
 function sicken(p,t,doses){ if(p.sick) return; p.sick=true; p.doses=doses||1; p.sickSince=t; p.sickMissed=false; p.sickLog=(p.sickLog||[]).filter(x=>t-x<CARE.sickWindow).concat([t]); if(p.stage!=='baby'&&p.sickLog.length>=CARE.sickFatal) p.fatal='болезней'; }
 const stageOf=age=>age<HOUR?'baby':age<ADULT_AT?'teen':'adult';
-function stageName(p){const n=isF(p)?CH[p.type].namesF:CH[p.type].names; if(p.stage==='adult') return n[p.form||'good']; if(p.stage==='teen'&&p.teenForm==='bad') return n.teenBad; return n[p.stage];}
+function stageName(p){const C=CH[RL(p)], n=isF(p)&&C.namesF?C.namesF:C.names; if(p.stage==='adult') return n[p.form||'good']; if(p.stage==='teen'&&p.teenForm==='bad') return n.teenBad; return n[p.stage];}
 const MENU={lifter:['Пельмени','Лазанья','Вареники','Борщ','Плов с мясом','Гречка с курицей','Омлет'],
   trainer:['Курица с рисом','Рис с рыбой','Творог','Овсянка с ягодами','Индейка с овощами','Омлет из белков'],
   office:['Бизнес-ланч','Суп дня','Цезарь','Паста','Пицца из офиса','Котлета с пюре'],
@@ -395,7 +419,7 @@ const MENU={lifter:['Пельмени','Лазанья','Вареники','Бо
   strongman:['Стейк','Пять яиц','Овсянка с мясом','Ведро курицы','Гречка с говядиной','Шашлык'],
   thai:['Рис с курицей','Том ям','Пад тай','Рис с рыбой','Курица с овощами','Суп с лапшой']};
 const dayIdx=()=>Math.floor((Date.now()-new Date().getTimezoneOffset()*MIN)/DAY);
-function foods(p){ const f=CH[p.type].food[p.stage==='baby'?'baby':'big']; if(p.stage==='baby'||!MENU[p.type]) return f; const M=MENU[p.type]; return [M[(dayIdx()+Math.floor(p.born/DAY))%M.length],f[1]]; }
+function foods(p){ const R=RL(p), f=CH[R].food[p.stage==='baby'?'baby':'big']; if(p.stage==='baby'||!MENU[R]) return f; const M=MENU[R]; return [M[(dayIdx()+Math.floor(p.born/DAY))%M.length],f[1]]; }
 function fatLevel(p){let f=Math.max(0,Math.round(p.extra/CH[p.type].fatDiv)); if(p.form==='bad') f+=2; return Math.min(f,6);}
 function weightText(p){const c=CH[p.type]; if(p.type==='lifter') return ((isF(p)?c.baseF:c.base)+p.extra).toFixed(1)+' кг'; if(p.type==='hamster') return Math.round(HAM_NORM[p.stage]+p.extra)+' г'; const w=(c.human?c.base:(p.type==='dog'?DOG_NORM:CAT_NORM)[p.stage])+p.extra; return (c.human||p.type==='dog'?w.toFixed(1):w.toFixed(2))+' кг';}
 const asleep=p=>p.asleep;
@@ -415,7 +439,7 @@ const SPOTS={curtain:{x:424,name:'за шторой',left:1},table:{x:535,name:'
 const camMin=p=>0, camMax=p=>!p?0:p.outside?WORLD-VIEW:p.stage==='baby'?320:WORLD-VIEW;
 function addMess(p){ if(p.poop>=4) return; p.poop++; (p.messX=p.messX||[]).push(Math.round(p.stage==='baby'?rnd(24,616):rnd(24,936))); }
 function startEv(p,type,t){
-  const s=p.stats, c=CH[p.type];
+  const s=p.stats, c=CH[RL(p)];
   if(type==='hungry') s.hunger=Math.min(s.hunger,20);
   if(type==='poop') addMess(p);
   if(type==='bored') s.happy=Math.min(s.happy,20);
@@ -478,15 +502,14 @@ function step(p,t){
   if(st!=='baby'&&p.sick){ if(!p.sickSince) p.sickSince=t; if(!p.sickMissed&&t-p.sickSince>CARE.missAfter){ p.sickMissed=true; p.mistakes++; } }
   if(!napping&&!babyNight&&p.asleep&&p.light&&!p.lightPenalized&&t-p.sleptAt>30*MIN){p.lightPenalized=true;p.mistakes++;s.happy=clamp(s.happy-25);p.msg='Ты не выключил свет. Он плохо спал.';}
   if(p.extra>0) p.extra=Math.max(0,p.extra-CH[p.type].w.burn/(24*60)*(p.stage==='baby'?6:1));
-  if(p.type==='lifter'&&st!=='baby'){
-    const c=CH.lifter;
+  if(RL(p)==='lifter'&&st!=='baby'){
+    const c=CH.lifter, WI=weighIn(p);
     if(p.meetOpen&&t>p.meetOpen.until){ p.meetOpen=null; s.happy=clamp(s.happy-20); p.msg='Не вышел на помост. Соревнования прошли без него 😢'; }
     if(!p.meetAt) p.meetAt=t+rnd(2.5,4)*DAY;
-    if(!p.meetWarned&&t>=p.meetAt-DAY){ p.meetWarned=true; p.msg='Через сутки соревнования! Следи за весом: категория до '+(isF(p)?c.catF:c.cat)+' кг.'; }
+    if(!p.meetWarned&&t>=p.meetAt-DAY){ p.meetWarned=true; p.msg='Через сутки соревнования! Следи за весом: категория '+WI.cap+'.'; }
     if(t>=p.meetAt){
-      const w=(isF(p)?c.baseF:c.base)+p.extra, cap=isF(p)?c.catF:c.cat;
-      if(w>cap){ s.happy=clamp(s.happy-40); p.meetResult='fail'; p.msg='Не прошёл взвешивание: '+w.toFixed(1)+' кг при категории до '+cap+'. Полгода подготовки коту под хвост 😭'; }
-      else { p.meetResult='weighed'; p.meetOpen={until:t+20*HOUR}; s.happy=clamp(s.happy+10); p.msg='Взвешивание пройдено: '+w.toFixed(1)+' кг. Выходи на помост — кнопка «Выступить»! 🏋️'; }
+      if(!WI.ok){ s.happy=clamp(s.happy-40); p.meetResult='fail'; p.msg='Не прошёл взвешивание: '+WI.text+', категория '+WI.cap+'. Полгода подготовки коту под хвост 😭'; }
+      else { p.meetResult='weighed'; p.meetOpen={until:t+20*HOUR}; s.happy=clamp(s.happy+10); p.msg='Взвешивание пройдено: '+WI.text+'. Выходи на помост — кнопка «Выступить»! 🏋️'; }
       p.meetsDone=(p.meetsDone||0)+1; p.meetAt=t+rnd(3,4)*DAY; p.meetWarned=false;
     }
   }
@@ -588,7 +611,7 @@ function forecast(fromNow){
       if(p.dormant){ notes.push({at:t,text:fem('Я так долго тебя ждал, что уснул… Разбуди меня 💤',sx)}); break; }
       if(prevSleep&&!p.asleep&&p.stage==='baby'&&isNight(t-MIN)) notes.push({at:t,text:fem('Доброе утро! Я проснулся, давай знакомиться 🥺',sx)});
       prevSleep=!!p.asleep;
-      if(p.type==='lifter'){
+      if(RL(p)==='lifter'){
         if(p.meetWarned&&!prevWarn) notes.push({at:t,text:fem('Через сутки соревнования! Не корми меня зефиром, мне в категорию влезать 🏋️',sx)});
         if((p.meetsDone||0)>prevMeets) notes.push({at:t,text:fem(p.meetResult==='weighed'?'Я прошёл взвешивание! Выходи со мной на помост, я готов 🏋️':'Я не прошёл взвешивание… Мне так обидно 😭',sx)});
         prevWarn=!!p.meetWarned; prevMeets=p.meetsDone||0;
@@ -656,29 +679,31 @@ function tapSpot(spot){
   save(); render();
 }
 function canBeard(p){ return CH[p.type].human&&p.type!=='alpha'&&p.stage!=='baby'&&!isF(p); }
-function styleTabs(p){ const hw=[['room','🏠 Комната']].concat(hwItems(p).length?[['hw','🎃 Хэллоуин']]:[]).concat(p.type==='lifter'?[['pjt','🏋️ ПЖТ']]:[]); return hw.concat(CH[p.type].human?[['hair','Причёска']].concat(canBeard(p)?[['beard','Борода']]:[]).concat([['hat','Шапки'],['glasses','Очки'],['neck','Шея'],['top','Верх'],['bottom','Низ'],['shoes','Обувь']]):[['hat','Шапки'],['glasses','Очки'],['neck','Шея'],['coat','Одёжка'],['pshoes','Обувь']]); }
+function styleTabs(p){ const hw=[['room','🏠 Комната']].concat(hwItems(p).length?[['hw','🎃 Хэллоуин']]:[]).concat(pjtItems(p).length?[['pjt','🏋️ ПЖТ']]:[]).concat(p.role&&p.role!==p.type&&roleKit(p).length?[['role','👔 Форма']]:[]); return hw.concat(CH[p.type].human?[['hair','Причёска']].concat(canBeard(p)?[['beard','Борода']]:[]).concat([['hat','Шапки'],['glasses','Очки'],['neck','Шея'],['top','Верх'],['bottom','Низ'],['shoes','Обувь']]):[['hat','Шапки'],['glasses','Очки'],['neck','Шея'],['coat','Одёжка'],['pshoes','Обувь']]); }
 function styleOpts(p,tab){
   if(tab==='hw') return hwItems(p).map(([sl,k,n])=>[sl+':'+k,n]);
+  if(tab==='role') return roleKit(p).map(([sl,k,n])=>[sl+':'+k,n]).concat([['off:all','Снять форму']]);
   if(tab==='room') return ROOM_ITEMS.map(([sl,k,n])=>[sl+':'+k,n]).concat([['reset:all','Как было']]);
   if(tab==='pjt') return pjtItems(p).map(([sl,k,n])=>[sl+':'+k,n]).concat([['none:none','Снять экипировку']]);
   const L=[['default','Без']]; if(tab==='hair'){ L[0][1]='Как было'; Object.entries(HAIRS).forEach(e=>L.push(e)); return L; }
+  if(tab==='hat') (S.owned||[]).filter(x=>x.startsWith('hat:bday')).forEach(x=>L.push([x.slice(4),'🎂 Корона дня рождения '+x.slice(8)]));
   Object.entries(WEAR[tab]||{}).forEach(([k,v])=>{ if((F_ONLY[tab]||[]).includes(k)&&!isF(p)) return; if(tab==='neck'&&k==='collar'&&CH[p.type].human) return; L.push([k,v]); });
   return L;
 }
 function renderStyle(p){
   if(!styleTab) styleTab=styleTabs(p)[0][0];
-  const SET=styleTab==='hw'||styleTab==='pjt'||styleTab==='room', HW=styleTab==='hw', PJ=styleTab==='pjt', RM=styleTab==='room';
+  const RO=styleTab==='role', SET=styleTab==='hw'||styleTab==='pjt'||styleTab==='room'||RO, HW=styleTab==='hw', PJ=styleTab==='pjt', RM=styleTab==='room';
   if(styleSel==null) styleSel=SET?(styleOpts(p,styleTab)[0]||[''])[0]:(p.look||{})[styleTab]||'default';
   const hsl=SET?styleSel.split(':'):null;
-  let look=SET?(hsl[0]==='none'?Object.assign({},p.look||{}):wearOn(p.look,hsl[0],hsl[1])):wearOn(p.look,styleTab,styleSel);
+  let look=RO&&hsl[0]==='off'?roleOff(p.look,p):SET?(hsl[0]==='none'?Object.assign({},p.look||{}):wearOn(p.look,hsl[0],hsl[1])):wearOn(p.look,styleTab,styleSel);
   if(PJ&&styleSel==='none:none'){ look=Object.assign({},p.look||{}); Object.keys(look).forEach(k=>{ if(k.startsWith('pjt_')) delete look[k]; }); }
   const vb=CH[p.type].human?'-85 -178 170 184':'-80 -150 175 156';
   const m=p.sick?'sick':'happy';
   $('styleView').innerHTML=`<div class="bal"><span class="coin"><i></i>${S.coins||0} ${coinWord(S.coins||0)}${HW?' · 🎃 '+(S.pumpkins||0):''}</span><button class="topup" id="topup" type="button">Пополнить</button></div>
     <div class="tabs">${styleTabs(p).map(([k,t])=>`<button type="button" data-tab="${k}" aria-pressed="${k===styleTab}">${t}</button>`).join('')}</div>
     <div class="pv">${RM?(()=>{ const [a,b]=styleSel.split(':'); roomPreview=a==='reset'?{}:Object.assign({},S.room||{},{[a]:b}); const sv=sceneSVG(p,'happy',fatLevel(p),false).replace(/viewBox="[^"]*"/,'viewBox="0 0 960 220"'); roomPreview=null; return sv; })():`<svg viewBox="${vb}" aria-label="Примерка">${charSVG(p.type,p.stage,p.stage==='teen'?p.teenForm:p.form,m,fatLevel(p),p.sex,p.breed,look)}</svg>`}</div>
-    <div class="opts">${styleOpts(p,styleTab).map(([k,t])=>`<button type="button" data-opt="${k}" aria-pressed="${k===styleSel}">${t}<small>${SET?(()=>{const [a,b]=k.split(':'); if(a==='none'||a==='reset') return '&nbsp;'; if(RM) return (S.room||{})[a]===b?'сейчас':owns('room_'+a,b)?'твоё':ROOM_ITEMS.find(x=>x[0]===a&&x[1]===b)[3]+' мон.'; const it=setItems(p,styleTab).find(x=>x[0]===a&&x[1]===b); return (p.look||{})[a]===b?'сейчас':owns(a,b)?'твоё':it[3]+(HW?' 🎃':' мон.');})():k===((p.look||{})[styleTab]||'default')?'сейчас':k==='default'||owns(styleTab,k)?'твоё':priceOf(styleTab,k)+' мон.'}</small></button>`).join('')}</div>
-    <div class="note">${styleNote||(RM?'Комната общая для всех твоих питомцев. Купленное остаётся навсегда, менять обратно бесплатно.':PJ?'Экипировка фирмы ПЖТ — только для лифтёра. Можно надеть всё сразу: трико, пояс, бинты и обувь. Купленное остаётся навсегда.':HW?'Костюмы за тыквы 🎃 продаются только до 1 ноября, а купленные остаются навсегда. Не хватает тыкв — можно за монеты: 1 тыква = 2 монеты.':'Примерка бесплатная. Купленная вещь остаётся у тебя навсегда, даже у следующих питомцев, и переодевать её бесплатно.')}</div>`;
+    <div class="opts">${styleOpts(p,styleTab).map(([k,t])=>`<button type="button" data-opt="${k}" aria-pressed="${k===styleSel}">${t}<small>${SET?(()=>{const [a,b]=k.split(':'); if(a==='none'||a==='reset'||a==='off') return '&nbsp;'; if(RO) return (p.look||{})[a]===b?'сейчас':'бесплатно'; if(RM) return (S.room||{})[a]===b?'сейчас':owns('room_'+a,b)?'твоё':ROOM_ITEMS.find(x=>x[0]===a&&x[1]===b)[3]+' мон.'; const it=setItems(p,styleTab).find(x=>x[0]===a&&x[1]===b); return (p.look||{})[a]===b?'сейчас':owns(a,b)?'твоё':it[3]+(HW?' 🎃':' мон.');})():k===((p.look||{})[styleTab]||'default')?'сейчас':k==='default'||owns(styleTab,k)?'твоё':priceOf(styleTab,k)+' мон.'}</small></button>`).join('')}</div>
+    <div class="note">${styleNote||(RO?'Форма твоей новой профессии — бесплатно. Надевай, если хочешь, чтобы было видно, кем он стал.':RM?'Комната общая для всех твоих питомцев. Купленное остаётся навсегда, менять обратно бесплатно.':PJ?'Экипировка фирмы ПЖТ — только для лифтёра. Можно надеть всё сразу: трико, пояс, бинты и обувь. Купленное остаётся навсегда.':HW?'Костюмы за тыквы 🎃 продаются только до 1 ноября, а купленные остаются навсегда. Не хватает тыкв — можно за монеты: 1 тыква = 2 монеты.':'Примерка бесплатная. Купленная вещь остаётся у тебя навсегда, даже у следующих питомцев, и переодевать её бесплатно.')}</div>`;
   $('styleView').querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{styleTab=b.dataset.tab;styleSel=null;styleNote='';sfx('click');render();});
   $('styleView').querySelectorAll('[data-opt]').forEach(b=>b.onclick=()=>{styleSel=b.dataset.opt;styleNote='';sfx('click');render();});
   $('topup').onclick=()=>{sfx('click');buyCoins();};
@@ -690,6 +715,7 @@ function act(a){
     const pr=it[3]; if(!owns(sl,k)){ if((S.pumpkins||0)>=pr) S.pumpkins-=pr; else if((S.coins||0)>=pr*2) S.coins-=pr*2; else { styleNote='Не хватает: нужно '+pr+' 🎃 (у тебя '+(S.pumpkins||0)+') или '+pr*2+' монет.'; sfx('no'); render(); return; }
       S.owned=(S.owned||[]).concat([sl+':'+k]); styleNote='Куплено: '+it[2]+'! Теперь это твоё навсегда.'; } else styleNote='Надето!';
     p.look=wearOn(p.look,sl,k); p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; save(); render(); return; }
+  if(a==='applyStyle'&&styleTab==='role'){ const [sl,k]=styleSel.split(':'); p.look=sl==='off'?roleOff(p.look,p):wearOn(p.look,sl,k); styleNote=sl==='off'?'Форма снята.':'Надето!'; p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; save(); render(); return; }
   if(a==='applyStyle'&&styleTab==='room'){ const [sl,k]=styleSel.split(':');
     if(sl==='reset'){ S.room={}; styleNote='Комната как была.'; save(); render(); return; }
     const it=ROOM_ITEMS.find(x=>x[0]===sl&&x[1]===k); if(!it) return; const pr=it[3];
@@ -710,7 +736,7 @@ function act(a){
     else pay('bed',null,t=>{ p.msg=t; render(); }); return; }
   if(a==='eternal'){ if(!S.eternalUsed&&!p.eternal) pay('eternal',null,t=>{ p.msg=t; render(); }); return; }
   if(a==='hall'){ if(p.eternal){ S.hall=p; p.hallAt=Date.now(); S.pet=null; view='main'; save(); render(); } return; }
-  const s=p.stats, c=CH[p.type];
+  const s=p.stats, c=CH[p.type], cr=CH[RL(p)];
   const prevMsg=p.msg, prevHunger=s.hunger, prevDisc=s.disc;
   if(!['meal','snack','scold','play'].includes(a)) sfx('click');
   setTimeout(()=>{ if(!S.pet) return; if(a==='meal'&&S.pet.stats.hunger>prevHunger) sfx('eat');
@@ -738,15 +764,15 @@ function act(a){
     if(caprice(p)) p.msg=capriceMsg(p,'Капризничает и отворачивается.');
     else if(s.hunger>=100) p.msg='Не хочет. Уже наелся.';
     else if(s.happy<=0&&Math.random()<.4) p.msg='Хандрит и не хочет есть…';
-    else {s.hunger=clamp(s.hunger+25);p.extra+=c.w.meal;p.msg=pick(c.eat)+spoil(p);p.pop=(p.pop||0)+1;p.reactUntil=Date.now()+2500;if(s.hunger>40)resolveEv(p,'hungry');}
+    else {s.hunger=clamp(s.hunger+25);p.extra+=c.w.meal;p.msg=pick(cr.eat)+spoil(p);p.pop=(p.pop||0)+1;p.reactUntil=Date.now()+2500;if(s.hunger>40)resolveEv(p,'hungry');}
   }
   else if(a==='snack'){
     view='main';
-    s.happy=clamp(s.happy+25);p.extra+=c.w.snack;p.msg=pick(c.treat)+spoil(p);p.pop=(p.pop||0)+1;p.reactUntil=Date.now()+2500;if(s.happy>40)resolveEv(p,'bored');
+    s.happy=clamp(s.happy+25);p.extra+=c.w.snack;p.msg=pick(cr.treat)+spoil(p);p.pop=(p.pop||0)+1;p.reactUntil=Date.now()+2500;if(s.happy>40)resolveEv(p,'bored');
     if(p.extra/c.fatDiv>=4&&Math.random()<.2){sicken(p,Date.now(),1);p.msg='Переел сладкого и заболел.';}
   }
   else if(a==='clean'){
-    if(!p.poop) p.msg='Тут и так чисто.'; else {p.poop=0;p.messX=[];p.msg=c.cleaned;resolveEv(p,'poop');}
+    if(!p.poop) p.msg='Тут и так чисто.'; else {p.poop=0;p.messX=[];p.msg=cr.cleaned;resolveEv(p,'poop');}
   }
   else if(a==='heal'){
     if(!p.sick&&p.stats.health<60){ p.stats.health=clamp(p.stats.health+30); p.msg='Дал витамины. Ему заметно лучше.'; p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; }
@@ -809,19 +835,19 @@ function meetOptions(){ const i=Math.floor(mg.round/3), a=mg.round%3, M=mg.max[i
   const st=i===2?5:2.5; return mg.lastOk[i]?[[last+st,'+'+kg(st)],[last+2*st,'+'+kg(2*st)],[last+4*st,'рекорд!']]:[[last,'тот же вес'],[last+st,'+'+kg(st)],[last+2*st,'+'+kg(2*st)]]; }
 function startMeet(p){ mg={type:'lifter',meet:true,round:0,score:0,phase:'intro',quit:false,max:LIFT_MAX(p),best:[0,0,0],lastW:[0,0,0],lastOk:[false,false,false]}; renderMG(); }
 function startGame(p){
-  mg={type:p.type,round:0,score:0,phase:'intro',quit:false};
-  if(p.type==='trainer') mg.deck=shuffle(EXERCISES);
-  if(p.type==='lifter'){ const P=todayProgram(p), M=LIFT_MAX(p)[P[0]]; mg.lift=LIFTS[P[0]]; mg.prog=mg.lift+' '+P[1]; mg.sets=P[2].map(([reps,pc])=>[reps,r25(M*pc)]);
+  const RT=RL(p); mg={type:RT,round:0,score:0,phase:'intro',quit:false};
+  if(RT==='trainer') mg.deck=shuffle(EXERCISES);
+  if(RT==='lifter'){ const P=todayProgram(p), M=LIFT_MAX(p)[P[0]]; mg.lift=LIFTS[P[0]]; mg.prog=mg.lift+' '+P[1]; mg.sets=P[2].map(([reps,pc])=>[reps,r25(M*pc)]);
     mg.deck=mg.sets.map(([reps,w],i)=>'Подход '+(i+1)+': '+mg.lift.toLowerCase()+' '+reps+' × '+kg(w)+' кг'); }
-  if(p.type==='strongman') mg.deck=['Камень 100 кг','Камень 120 кг','Камень 140 кг','Камень 160 кг','Камень 180 кг'];
-  if(p.type==='thai'){ const K=['Джеб','Лоу-кик','Колено','Локоть']; mg.deck=[3,3,4,4,5].map(n=>Array.from({length:n},()=>pick(K))); }
-  if(p.type==='hamster') mg.deck=shuffle(['Разгон','Круг почёта','Спринт','Марафон','Рывок','Турбо','Ещё круг','Финишная прямая']);
-  if(p.type==='office'){ const imp=shuffle(MAILS.filter(m=>m[1])), sp=shuffle(MAILS.filter(m=>!m[1])); const nImp=2+Math.floor(Math.random()*2); mg.deck=shuffle(imp.slice(0,nImp).concat(sp.slice(0,5-nImp))); }
-  if(p.type==='student') mg.deck=shuffle(QUIZ);
-  if(p.type==='zoomer') mg.deck=shuffle(TRENDS);
-  if(p.type==='alpha') mg.deck=shuffle(HIDE_ALPHA);
-  if(p.type==='cat') mg.deck=shuffle(HIDE_CAT);
-  if(p.type==='dog') mg.deck=shuffle(FETCH);
+  if(RT==='strongman') mg.deck=['Камень 100 кг','Камень 120 кг','Камень 140 кг','Камень 160 кг','Камень 180 кг'];
+  if(RT==='thai'){ const K=['Джеб','Лоу-кик','Колено','Локоть']; mg.deck=[3,3,4,4,5].map(n=>Array.from({length:n},()=>pick(K))); }
+  if(RT==='hamster') mg.deck=shuffle(['Разгон','Круг почёта','Спринт','Марафон','Рывок','Турбо','Ещё круг','Финишная прямая']);
+  if(RT==='office'){ const imp=shuffle(MAILS.filter(m=>m[1])), sp=shuffle(MAILS.filter(m=>!m[1])); const nImp=2+Math.floor(Math.random()*2); mg.deck=shuffle(imp.slice(0,nImp).concat(sp.slice(0,5-nImp))); }
+  if(RT==='student') mg.deck=shuffle(QUIZ);
+  if(RT==='zoomer') mg.deck=shuffle(TRENDS);
+  if(RT==='alpha') mg.deck=shuffle(HIDE_ALPHA);
+  if(RT==='cat') mg.deck=shuffle(HIDE_CAT);
+  if(RT==='dog') mg.deck=shuffle(FETCH);
   renderMG();
 }
 function nextRound(){
@@ -870,8 +896,8 @@ const PAIRS={strongman:['🪨','🥩','🛞','🏆'],thai:['🥊','🥭','🏆',
   student:['📚','🎓','✏️','🍜'],zoomer:['📱','🎧','🛹','✨'],alpha:['🧸','🍭','🚀','🎈']};
 let catchTimer=null;
 function startMini(p,mode){
-  mg={type:p.type,mode,round:0,score:0,phase:'intro',quit:false};
-  if(mode==='pairs'){ mg.cards=shuffle(PAIRS[p.type].concat(PAIRS[p.type])).map(e=>({e,up:false,ok:false})); mg.moves=0; mg.open=[]; }
+  mg={type:RL(p),mode,round:0,score:0,phase:'intro',quit:false};
+  if(mode==='pairs'){ mg.cards=shuffle(PAIRS[RL(p)].concat(PAIRS[RL(p)])).map(e=>({e,up:false,ok:false})); mg.moves=0; mg.open=[]; }
   if(mode==='ttt'){ mg.b=Array(9).fill(''); }
   renderMG();
 }
@@ -884,7 +910,7 @@ function tttAI(b){ const free=b.map((v,i)=>v?null:i).filter(i=>i!==null);
   for(const who of ['O','X']) for(const i of free){ const c=b.slice(); c[i]=who; if(tttWin(c,who)) return i; }
   if(!b[4]&&Math.random()<.6) return 4; return pick(free); }
 function renderMini(v){
-  const p=S.pet, C=CATCH[p.type];
+  const p=S.pet, C=CATCH[RL(p)];
   const head=`<h3><span>${mg.mode==='catch'?'Поймай':mg.mode==='pairs'?'Найди пару':'Крестики-нолики'}</span><span>${mg.mode==='catch'&&mg.phase==='play'?'очки '+mg.score+' · '+Math.max(0,Math.ceil((mg.end-performance.now())/1000))+' с':mg.mode==='pairs'?'ходов '+(mg.moves||0):''}</span></h3>`;
   let body='';
   if(mg.phase==='intro'){
@@ -915,7 +941,7 @@ function renderMini(v){
   document.getElementById('mgQuit').onclick=()=>{ if(!mg.quit){mg.quit=true;renderMG();return;} clearInterval(catchTimer); catchTimer=null; stopTimers(); mg=null; render(); };
 }
 function runCatch(){
-  renderMG(); const C=CATCH[S.pet.type], F=document.getElementById('cfield'); mg.end=performance.now()+20000; let last=0;
+  renderMG(); const C=CATCH[RL(S.pet)], F=document.getElementById('cfield'); mg.end=performance.now()+20000; let last=0;
   const spawn=()=>{ const good=Math.random()<.65, el=document.createElement('div'); el.className='it'; el.textContent=good?C.good:C.bad; el.style.left=Math.round(rnd(4,82))+'%';
     const dur=rnd(2000,2900); el.animate([{transform:'translateY(0)'},{transform:'translateY(290px)'}],{duration:dur,easing:'linear'}).onfinish=()=>el.remove();
     el.addEventListener('pointerdown',e=>{ e.preventDefault(); if(!mg) return; if(good){ mg.score++; sfx('hit'); } else { mg.score--; sfx('miss'); } el.remove(); upd(); }); F.appendChild(el); };
@@ -1025,7 +1051,7 @@ function human(type,stage,form,mood,fat,sex,look){
              zoomer:{top:'#c8b6f0',pants:'#6b7a8f',hair:baby?'#5a3f2c':'#9b7bd6'},
              alpha:{top:'#ffd25e',pants:'#e8584f',hair:'#e8c46a'}}[type];
   if(OUTF) pal=Object.assign({},pal,{top:OUTF.top,pants:OUTF.pants||pal.pants});
-  const PJ=k=>type==='lifter'&&W('pjt_'+k);
+  const PJ=k=>!!W('pjt_'+k);
   if(PJ('suit')&&!OUTF) pal=Object.assign({},pal,{top:PJT_COL[look.pjt_suit],pants:PJT_COL[look.pjt_suit]});
   const bare=(type==='trainer'||type==='alpha'||type==='lifter'||type==='strongman'||type==='thai')&&!OUTF;
   const sl=bare?skin:pal.top;
@@ -1089,6 +1115,8 @@ function human(type,stage,form,mood,fat,sex,look){
     if(!good&&!baby) g+=`<path d="M-16 ${by+2} q16 12 32 0" fill="none" stroke="${OUT}" stroke-width="4"/>`; }
   if(type==='alpha'&&!baby) g+=`<polygon points="0,${by+8} 3,${by+14} 9,${by+15} 4,${by+19} 6,${by+25} 0,${by+22} -6,${by+25} -4,${by+19} -9,${by+15} -3,${by+14}" fill="#fff" stroke="${OUT}" stroke-width="1.5" stroke-linejoin="round"/>`;
   }
+  if(type!=='lifter'&&!kid){ if(PJ('suit')&&!OUTF) g+=`<text x="${-bw/4-2}" y="${by+bh*.42}" text-anchor="middle" font-family="Arial" font-weight="900" font-size="7" fill="#fff">ПЖТ</text>`;
+    if(PJ('belt')){ const beltY=by+bh*.58, th=look.pjt_belt==='thin'?6:12; g+=`<rect x="${-bw/2+1}" y="${beltY}" width="${bw-2}" height="${th}" fill="#1e1e24" stroke="${OUT}" stroke-width="2.5"/><rect x="-7" y="${beltY}" width="14" height="${th}" rx="2" fill="#c9cfd6" stroke="${OUT}" stroke-width="2"/>`; } }
   if(fat>=4) g+=`<circle cx="0" cy="${by+bh*.62}" r="2" fill="${OUT}"/>`;
   if(F&&type==='office'&&!OUTF){ g+=`<path d="M${-bw/2+1} ${bb-12} h${bw-2} l6 16 h${-bw-10} z" fill="#4a4f5c" stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"/>`; }
   if(HAIR==='long') g+=`<path d="M${-hr+2} ${hy-6} Q${-hr-4} ${hy+38} ${-hr+10} ${hy+44} L${hr-10} ${hy+44} Q${hr+4} ${hy+38} ${hr-2} ${hy-6} Z" fill="${pal.hair}" stroke="${OUT}" stroke-width="2.5"/>`;
@@ -1206,7 +1234,7 @@ Object.assign(WEAR.coat,{stripes:'В полоску',pink:'Розовая коф
 Object.assign(WEAR.pshoes,{blue:'Синие',pink:'Розовые',green:'Зелёные',gold:'Золотые',purple:'Фиолетовые',orange:'Оранжевые',silver:'Серебряные',striped:'Полосатые',polka:'В горошек',brown:'Коричневые'});
 const WEAR_PRICE={hair:5,hat:5,glasses:5,neck:5,top:10,bottom:8,shoes:6,coat:8,pshoes:6};
 const HUMAN_ONLY_NECK=['collar'], PET_ONLY_NECK=[], F_ONLY={top:['dress'],bottom:['skirt','pinkskirt'],shoes:['heels','blueheels']};
-Object.assign(OUTFITS,{hoodiered:{top:'#d6403a'},hoodiepink:{top:'#f29ac8'},stripes:{top:'#f7f7f2'},polo:{top:'#3bb39a'},vest:{top:'#f7f7f2'},raincoat:{top:'#f2c94c'},tank:{top:'#f7f7f2'},jersey:{top:'#3b6fd4'},kimono:{top:'#f7f7f2'},greensweater:{top:'#4caf7d'},vampire:{top:'#1e1e24',pants:'#1e1e24'},skeleton:{top:'#1e1e24',pants:'#1e1e24'},ghost:{top:'#f7f7f2'},leather:{name:'Кожаная куртка',top:'#2a2a2e'},denim:{name:'Джинсовка',top:'#5b7fb5'},suit:{name:'Пиджак',top:'#5d6470'},
+Object.assign(OUTFITS,{strongsinglet:{top:'#2a2a2e'},hoodiered:{top:'#d6403a'},hoodiepink:{top:'#f29ac8'},stripes:{top:'#f7f7f2'},polo:{top:'#3bb39a'},vest:{top:'#f7f7f2'},raincoat:{top:'#f2c94c'},tank:{top:'#f7f7f2'},jersey:{top:'#3b6fd4'},kimono:{top:'#f7f7f2'},greensweater:{top:'#4caf7d'},vampire:{top:'#1e1e24',pants:'#1e1e24'},skeleton:{top:'#1e1e24',pants:'#1e1e24'},ghost:{top:'#f7f7f2'},leather:{name:'Кожаная куртка',top:'#2a2a2e'},denim:{name:'Джинсовка',top:'#5b7fb5'},suit:{name:'Пиджак',top:'#5d6470'},
   sweater:{name:'Свитер',top:'#c0453b'},plaid:{name:'Рубашка в клетку',top:'#d35a4f'},tshirt:{name:'Футболка',top:'#f7f7f2'}});
 OUTFITS.sport.name='Олимпийка';
 const _outfitSVG=outfitSVG;
@@ -1218,6 +1246,7 @@ outfitSVG=function(o,bw,bh,by,bb,fat){
   if(o==='sweater') return `<path d="M${-bw/2+2} ${by+bh*.35} ${Array.from({length:6},()=>`l${(bw-4)/12} -5 l${(bw-4)/12} 5`).join(' ')}" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M${-bw/2+3} ${by+bh-6} h${bw-6}" stroke="#8f2f28" stroke-width="3"/>`;
   if(o==='plaid'){ let s=''; for(let i=1;i<4;i++) s+=`<path d="M${-bw/2+bw*i/4} ${by+2} v${bh-4}" stroke="#7a2a24" stroke-width="2.5"/><path d="M${-bw/2+2} ${by+bh*i/4} h${bw-4}" stroke="#7a2a24" stroke-width="2.5"/>`; return s+`<path d="M0 ${by+2} v${bh-4}" fill="none" ${st}/>`; }
   if(o==='tshirt') return `<path d="M-7 ${by+12} l7 -6 l7 6 l-7 9 z" fill="#e8584f" ${st}/><circle cx="0" cy="${by+bh*.62}" r="3" fill="#f2c14e"/>`;
+  if(o==='strongsinglet') return `<path d="M${-bw/2+3} ${by+bh*.3} h${bw-6}" stroke="#f2c14e" stroke-width="4"/><text x="0" y="${by+bh*.62}" text-anchor="middle" font-family="Arial" font-weight="900" font-size="8" fill="#f2c14e" stroke="none">СИЛА</text>`;
   if(o==='hoodiered'||o==='hoodiepink') return _outfitSVG('hoodie',bw,bh,by,bb,fat);
   if(o==='greensweater') return `<path d="M${-bw/2+2} ${by+bh*.35} ${Array.from({length:6},()=>`l${(bw-4)/12} -5 l${(bw-4)/12} 5`).join(' ')}" fill="none" stroke="#fff" stroke-width="2.5"/>`;
   if(o==='stripes'){ let r=''; for(let k=.2;k<.95;k+=.16) r+=`<path d="M${-bw/2+3} ${by+bh*k} h${bw-6}" stroke="#2a55a8" stroke-width="3"/>`; return r; }
@@ -1235,6 +1264,7 @@ outfitSVG=function(o,bw,bh,by,bb,fat){
 function bottomSVG(id,legX,bb,legH,skin){
   const st=`stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"`, y=bb-8;
   const col={jeans:'#3f5f8f',black:'#2a2a2e',shorts:'#c9a66b',joggers:'#8a8f98',camo:'#6b7a4a',skirt:'#2a2a2e',jeansblack:'#2a2a2e',cargo:'#7a7a5a',redpants:'#c43c35',checked:'#8a5a8a',shortsblue:'#4f8fd0',white:'#f2f2ee',greysweats:'#a0a4ab',leggings:'#1e1e24',pinkskirt:'#f29ac8',kilt:'#c43c35'}[id];
+  if(id==='thaishorts') { let s=''; [-1,1].forEach(sx=>{ const x=sx*legX-5; s+=`<rect x="${x}" y="${y}" width="10" height="${legH}" rx="4" fill="${skin}" ${st}/>`; }); return s+`<path d="M${-legX-8} ${y-2} h${2*legX+16} l3 ${Math.min(14,legH)} h${-2*legX-22} z" fill="#d6304a" ${st}/><rect x="${-legX-8}" y="${y-2}" width="${2*legX+16}" height="4" fill="#fff"/>`; }
   if(id==='pinkskirt'||id==='kilt') return `<path d="M${-legX-9} ${y} h${2*legX+18} l7 ${Math.min(22,legH)} h${-2*legX-32} z" fill="${col}" ${st}/>`+(id==='kilt'?`<path d="M${-legX-6} ${y+6} h${2*legX+12} M${-legX-4} ${y+12} h${2*legX+8} M-4 ${y} v${Math.min(20,legH)} M6 ${y} v${Math.min(20,legH)}" stroke="#2a2a2e" stroke-width="1.5"/>`:'');
   if(id==='skirt') return `<path d="M${-legX-9} ${y} h${2*legX+18} l7 ${Math.min(22,legH)} h${-2*legX-32} z" fill="${col}" ${st}/>`;
   let s=''; [-1,1].forEach(sx=>{ const x=sx*legX-5;
@@ -1273,6 +1303,7 @@ function shoesSVG(id,legX){
   return s;
 }
 function hatSVG(id,hr,hy){
+  if(id&&id.startsWith('bday')) return bdayHat(id.slice(4),hr,hy);
   const st=`stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"`, t=hy-hr;
   const dome=(c,h)=>`<path d="M${-hr-1} ${hy-6} Q${-hr-1} ${t-h} 0 ${t-h} Q${hr+1} ${t-h} ${hr+1} ${hy-6} Z" fill="${c}" ${st}/>`;
   if(id==='cap') return dome('#e8584f',4)+`<path d="M${hr-6} ${hy-8} q18 -2 24 4 q-12 4 -24 2 z" fill="#c43c35" ${st}/>`;
@@ -1293,6 +1324,8 @@ function hatSVG(id,hr,hy){
   if(id==='earmuffs') return `<path d="M${-hr} ${hy} Q0 ${t-14} ${hr} ${hy}" fill="none" stroke="#7a5cc4" stroke-width="4"/><circle cx="${-hr}" cy="${hy+2}" r="9" fill="#f7f1e3" ${st}/><circle cx="${hr}" cy="${hy+2}" r="9" fill="#f7f1e3" ${st}/>`;
   if(id==='capblue') return dome('#3b6fd4',4)+`<path d="M${hr-6} ${hy-8} q18 -2 24 4 q-12 4 -24 2 z" fill="#2a55a8" ${st}/>`;
   if(id==='beaniepink') return dome('#f29ac8',12)+`<rect x="${-hr-2}" y="${hy-12}" width="${2*hr+4}" height="9" rx="4" fill="#e07aa8" ${st}/><circle cx="0" cy="${t-14}" r="7" fill="#fff" ${st}/>`;
+  if(id==='mongkon') return `<path d="M${-hr} ${hy-12} Q0 ${hy-22} ${hr} ${hy-12}" fill="none" stroke="#d6304a" stroke-width="6"/><path d="M${-hr} ${hy-12} Q0 ${hy-22} ${hr} ${hy-12}" fill="none" stroke="#fff" stroke-width="1.5" stroke-dasharray="4 4"/><path d="M0 ${hy-18} q2 -14 -4 -22" fill="none" stroke="#d6304a" stroke-width="4" stroke-linecap="round"/>`;
+  if(id==='gradcap') return `<g ${st}><rect x="-16" y="${t-2}" width="32" height="9" fill="#2a2a2a"/><polygon points="-32,${t-4} 0,${t-15} 32,${t-4} 0,${t+6}" fill="#2a2a2a"/></g><path d="M26 ${t-5} v15" stroke="#f2c14e" stroke-width="3"/>`;
   if(id==='witch') return `<ellipse cx="0" cy="${t+4}" rx="${hr+14}" ry="6" fill="#4a2f6e" ${st}/><path d="M-15 ${t+3} L4 ${t-38} q5 -5 9 2 L15 ${t+3} Z" fill="#5b3a86" ${st}/><path d="M-14 ${t-3} h28" stroke="#f2c14e" stroke-width="5"/>`;
   if(id==='horns') return `<path d="M-16 ${t+8} q-10 -12 -4 -26 q6 12 14 20 z M16 ${t+8} q10 -12 4 -26 q-6 12 -14 20 z" fill="#e8584f" ${st}/>`;
   if(id==='catears') return `<path d="M-24 ${t+12} L-20 ${t-14} L-5 ${t+3} Z M24 ${t+12} L20 ${t-14} L5 ${t+3} Z" fill="#2a2a2e" ${st}/><path d="M-19 ${t+5} L-18 ${t-6} L-11 ${t+3} Z M19 ${t+5} L18 ${t-6} L11 ${t+3} Z" fill="#f29ac8"/>`;
@@ -1309,6 +1342,8 @@ function beardSVG(id,hr,hy,hc){ const st=`stroke="${OUT}" stroke-width="2" strok
   if(id==='goatee') return `<path d="M-6 ${hy+23} q6 14 12 0 z" fill="${c}" ${st}/>`+must;
   if(id==='mustache') return must;
   return ''; }
+function bdayHat(y,hr,hy){ const t=hy-hr, st=`stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"`;
+  return `<polygon points="-20,${t+6} -20,${t-14} -10,${t-4} 0,${t-20} 10,${t-4} 20,${t-14} 20,${t+6}" fill="#f2c14e" ${st}/><rect x="-20" y="${t-2}" width="40" height="8" fill="#e8584f" stroke="${OUT}" stroke-width="1.5"/><text x="0" y="${t+5}" text-anchor="middle" font-family="Arial" font-weight="900" font-size="7" fill="#fff">${y}</text><rect x="-2" y="${t-34}" width="4" height="12" fill="#5bb6e8" stroke="${OUT}" stroke-width="1"/><path d="M0 ${t-36} q-3 -4 0 -8 q3 4 0 8 z" fill="#ffb347"/><circle cx="-20" cy="${t-14}" r="2.5" fill="#5bb6e8"/><circle cx="20" cy="${t-14}" r="2.5" fill="#f29ac8"/><circle cx="0" cy="${t-20}" r="2.5" fill="#7bd36b"/>`; }
 function glassesSVG(id,ey){
   const st=`stroke="${OUT}" stroke-width="2"`;
   if(id==='sun') return `<g ${st}><rect x="-21" y="${ey-5}" width="17" height="11" rx="4" fill="#1e1e24"/><rect x="4" y="${ey-5}" width="17" height="11" rx="4" fill="#1e1e24"/><path d="M-4 ${ey-1} h8" fill="none"/></g><path d="M-17 ${ey-2} l5 0 M8 ${ey-2} l5 0" stroke="#fff" stroke-width="1.5" opacity=".6"/>`;
@@ -1335,6 +1370,7 @@ function neckSVG(id,y,w){
   if(id==='bowtie') return `<path d="M0 ${y+4} l-10 -6 v12 z M0 ${y+4} l10 -6 v12 z" fill="#1e1e24" ${st}/><circle cx="0" cy="${y+4}" r="2.5" fill="#1e1e24"/>`;
   if(id==='bandana') return `<path d="M${-w} ${y-2} h${2*w} l${-w} ${w*.9} z" fill="#e8584f" ${st}/><circle cx="-6" cy="${y+3}" r="1.6" fill="#fff"/><circle cx="6" cy="${y+3}" r="1.6" fill="#fff"/><circle cx="0" cy="${y+9}" r="1.6" fill="#fff"/>`;
   if(id==='collar') return `<path d="M${-w} ${y} q${w} ${w*.55} ${2*w} 0" fill="none" stroke="#e8584f" stroke-width="5" stroke-linecap="round"/><circle cx="0" cy="${y+w*.3+4}" r="4.5" fill="#f2c14e" ${st}/>`;
+  if(id==='gloves') return `<path d="M${-w*.7} ${y} q${w*.7} ${w*.9} ${w*1.4} 0" fill="none" stroke="#f7f7f2" stroke-width="1.5"/><g ${st}><ellipse cx="${-w*.45}" cy="${y+w*.6}" rx="6" ry="7" fill="#d6304a"/><ellipse cx="${w*.45}" cy="${y+w*.6}" rx="6" ry="7" fill="#d6304a"/></g>`;
   if(id==='tie'||id==='tieblue') return `<path d="M0 ${y+2} l-4 5 l4 22 l4 -22 z" fill="${id==='tie'?'#d6304a':'#3b6fd4'}" ${st}/><path d="M-4 ${y} h8 l-4 6 z" fill="${id==='tie'?'#d6304a':'#3b6fd4'}" ${st}/>`;
   if(id==='medal') return `<path d="M-8 ${y-2} L0 ${y+14} L8 ${y-2}" fill="none" stroke="#3b6fd4" stroke-width="3"/><circle cx="0" cy="${y+18}" r="7" fill="#f2c14e" ${st}/><path d="M-2 ${y+18} h4" stroke="${OUT}" stroke-width="1.5"/>`;
   if(id==='whistle') return `<path d="M${-w*.6} ${y} q${w*.6} ${w*.8} ${w*1.2} 0" fill="none" stroke="#e8584f" stroke-width="2"/><rect x="-6" y="${y+w*.4}" width="12" height="7" rx="3" fill="#c9cfd6" ${st}/>`;
@@ -1346,9 +1382,11 @@ function neckSVG(id,y,w){
   if(id==='lei'){ let s=''; for(let i=0;i<=8;i++){ const k=i/8, x=-w+2*w*k, yy=y+w*.7*4*k*(1-k)*.5; s+=`<circle cx="${x}" cy="${yy}" r="4" fill="${['#f29ac8','#f2c14e','#e8584f'][i%3]}" ${st}/>`; } return s; }
   return '';
 }
-function petCoatSVG(id,bcx,bcy,brx,bry){
+function petCoatSVG(id,bcx,bcy,brx,bry,yo){
   const st=`stroke="${OUT}" stroke-width="2.5"`;
-  const col={sweater:'#c0453b',raincoat:'#f2c94c',hoodie:'#7e8fa6',leather:'#2a2a2e',tshirt:'#f7f7f2',vampire:'#1e1e24',skeleton:'#1e1e24',ghost:'#f7f7f2',stripes:'#f7f7f2',pink:'#f29ac8',denim:'#5b7fb5',camo:'#6b7a4a',puffer:'#e8584f',cape:'#d6304a',dots:'#5bb6e8',green:'#4caf7d',bee:'#f2c14e',tux:'#1e1e24'}[id];
+  const col={liftbelt:'#1e1e24',strongbelt:'#c43c35',sweater:'#c0453b',raincoat:'#f2c94c',hoodie:'#7e8fa6',leather:'#2a2a2e',tshirt:'#f7f7f2',vampire:'#1e1e24',skeleton:'#1e1e24',ghost:'#f7f7f2',stripes:'#f7f7f2',pink:'#f29ac8',denim:'#5b7fb5',camo:'#6b7a4a',puffer:'#e8584f',cape:'#d6304a',dots:'#5bb6e8',green:'#4caf7d',bee:'#f2c14e',tux:'#1e1e24'}[id];
+  if(id==='liftbelt'||id==='strongbelt'){ const h=Math.max(8,bry*.32), y0=bcy+bry*(yo==null?.05:yo), y1=y0+h, hw=y=>brx*Math.sqrt(Math.max(0,1-Math.pow((y-bcy)/bry,2)))+1.5, w0=hw(y0), w1=hw(y1);
+    return `<path d="M${bcx-w0} ${y0} Q${bcx} ${y0+5} ${bcx+w0} ${y0} L${bcx+w1} ${y1} Q${bcx} ${y1+5} ${bcx-w1} ${y1} Z" fill="${col}" ${st}/><rect x="${bcx-6}" y="${y0+1}" width="12" height="${h+2}" rx="2" fill="#c9cfd6" stroke="${OUT}" stroke-width="1.5"/>`; }
   let s=`<path d="M${bcx-brx*.7} ${bcy+bry*.55} Q${bcx-brx*.95} ${bcy-bry*1.05} ${bcx} ${bcy-bry*1.02} Q${bcx+brx*.95} ${bcy-bry*1.05} ${bcx+brx*.7} ${bcy+bry*.55} Z" fill="${col}" ${st}/>`;
   if(id==='sweater') s+=`<path d="M${bcx-brx*.75} ${bcy-bry*.15} ${Array.from({length:6},()=>`l${brx*.125} -4 l${brx*.125} 4`).join(' ')}" fill="none" stroke="#fff" stroke-width="2.5"/>`;
   if(id==='raincoat') s+=`<circle cx="${bcx-brx*.2}" cy="${bcy-bry*.3}" r="2.5" fill="${OUT}"/><circle cx="${bcx+brx*.15}" cy="${bcy-bry*.2}" r="2.5" fill="${OUT}"/>`;
@@ -1478,7 +1516,7 @@ function hamster(stage,form,mood,fat,opt={}){
   if(B.patch) g+=`<ellipse cx="${-brx*.45}" cy="${bcy-bry*.45}" rx="${brx*.32}" ry="${bry*.32}" fill="${B.patch}"/><ellipse cx="${brx*.5}" cy="${bcy+bry*.3}" rx="${brx*.28}" ry="${bry*.28}" fill="${B.patch}"/>`;
   if(B.stripe) g+=`<path d="M0 ${bcy-bry+2} v${bry*.38}" stroke="${B.stripe}" stroke-width="6" stroke-linecap="round"/>`;
   const CC=PW('coat');
-  if(CC) g+=petCoatSVG(LK.coat,0,bcy+bry*.5,brx*.9,bry*.5);
+  if(CC) g+=/belt$/.test(LK.coat)?petCoatSVG(LK.coat,0,bcy,brx,bry,.42):petCoatSVG(LK.coat,0,bcy+bry*.5,brx*.9,bry*.5);
   else g+=`<ellipse cx="0" cy="${bcy+bry*.42}" rx="${brx*.6}" ry="${bry*.45}" fill="${B.belly}"/>`;
   const ch=9*k+fat*1.6;
   [-1,1].forEach(sx=>g+=`<ellipse cx="${sx*(brx*.6)}" cy="${hy+12}" rx="${ch}" ry="${ch*.8}" fill="${B.belly}" opacity=".9"/>`);
@@ -1553,7 +1591,7 @@ function sceneSVG(p,m,fat,evo){
   const hwNow=hwOn(Date.now());
   s+=furnitureSVG(p);
   if(hwNow){ s+=hwRoomSVG(p); const H=hunt(p); H.spots.filter(k=>!H.found.includes(k)).forEach(k=>{ const [x,y]=HUNT_X[k]; s+=`<g data-spot="${k}" style="cursor:pointer"><circle class="hwglow" cx="${x}" cy="${y-8}" r="14" fill="#ffb347"/>`+pumpkinSVG(x,y,8,H.gold===k,false)+`<circle cx="${x}" cy="${y-8}" r="22" fill="transparent"/></g>`; }); }
-  (p.messX||[]).slice(0,p.poop).forEach(x=>s+=messSVG(CH[p.type].mess,x));
+  (p.messX||[]).slice(0,p.poop).forEach(x=>s+=messSVG(CH[RL(p)].mess,x));
   if(!p.hidden){
     const sc=p.stage==='teen'?.9:1;
     const hop=!p.asleep&&m!=='sick'&&m!=='sad';
@@ -1610,7 +1648,8 @@ const PJT_ITEMS=[['pjt_suit','red','Трико ПЖТ красное',15],['pjt_
   ['pjt_belt','thick','Пояс ПЖТ',12],['pjt_belt','thin','Тонкий пояс для жима',10],['pjt_knee','wraps','Коленные бинты',8],['pjt_knee','sleeves','Наколенники',8],
   ['pjt_wrist','wraps','Кистевики',5],['pjt_elbow','sleeves','Налокотники',6],['pjt_shoes','squat','Штангетки',12],['pjt_shoes','dead','Тяговые тапки',10]];
 const PJT_COL={red:'#c43c35',blue:'#2f5fb0',black:'#1e1e24',burgundy:'#7a1f2b',pink:'#e86aa0'};
-function pjtItems(p){ return p.type==='lifter'?PJT_ITEMS.filter(x=>x[1]!=='pink'||isF(p)):[]; }
+function pjtItems(p){ return RL(p)==='lifter'&&CH[p.type].human?PJT_ITEMS.filter(x=>x[1]!=='pink'||isF(p)):[]; }
+function roleOff(look,p){ const L=Object.assign({},look||{}); roleKit(p).forEach(([sl,k])=>{ if(L[sl]===k) delete L[sl]; }); return L; }
 function wearOn(look,slot,key){ const L=Object.assign({},look||{}); L[slot]=key;
   if(slot==='pjt_suit'){ delete L.top; delete L.bottom; } if(slot==='pjt_shoes') delete L.shoes;
   if((slot==='top'||slot==='bottom')&&key!=='default') delete L.pjt_suit; if(slot==='shoes'&&key!=='default') delete L.pjt_shoes;
@@ -1628,6 +1667,17 @@ const ROOM_ITEMS=[
 const roomCol=(slot,R)=>{ const it=ROOM_ITEMS.find(x=>x[0]===slot&&x[1]===(R||{})[slot]); return it?it[4]:null; };
 let roomPreview=null;
 const roomOf=()=>roomPreview||S.room||{};
+const ROLE_KIT={
+  lifter:{a:[['coat','liftbelt','Маленький пояс лифтёра'],['neck','medal','Медаль']]},
+  strongman:{h:[['top','strongsinglet','Майка силача'],['neck','medal','Медаль']],a:[['coat','strongbelt','Пояс силача'],['neck','medal','Медаль']]},
+  thai:{h:[['hat','mongkon','Монгкон — повязка на голову'],['bottom','thaishorts','Тайские шорты'],['neck','gloves','Перчатки на шее']],a:[['hat','mongkon','Монгкон — повязка на голову'],['neck','gloves','Перчатки на шее']]},
+  trainer:{h:[['top','sport','Олимпийка тренера'],['neck','whistle','Свисток'],['hat','headband','Повязка']],a:[['neck','whistle','Свисток'],['hat','headband','Повязка']]},
+  office:{h:[['top','suit','Пиджак'],['neck','tie','Галстук']],a:[['neck','tie','Галстук'],['glasses','nerd','Офисные очки']]},
+  student:{h:[['hat','gradcap','Шапочка выпускника'],['glasses','round','Очки отличника']],a:[['hat','gradcap','Шапочка выпускника'],['glasses','round','Очки отличника']]},
+  zoomer:{h:[['neck','headphones','Наушники'],['top','hoodiepink','Худи']],a:[['neck','headphones','Наушники'],['glasses','pixel','Пиксельные очки']]},
+  alpha:{h:[['hat','partyhat','Колпачок'],['neck','bandana','Бандана']],a:[['hat','partyhat','Колпачок'],['neck','bandana','Бандана']]},
+  cat:{a:[['neck','bell','Колокольчик']]},dog:{a:[['neck','collar','Ошейник']]},hamster:{a:[['neck','bandana','Бандана']]}};
+function roleKit(p){ const K=ROLE_KIT[RL(p)]||{}; return (CH[p.type].human?K.h:K.a)||[]; }
 const setItems=(p,tab)=>tab==='hw'?hwItems(p):tab==='pjt'?pjtItems(p):tab==='room'?ROOM_ITEMS:[];
 function hwItems(p){ const h=CH[p.type].human; return HW_ITEMS.filter(([sl,k])=>!(p.type==='cat'&&k==='catears')).map(([sl,k,n,pr])=>[sl==='top'&&!h?'coat':sl,k,n,pr]).filter(([sl,k])=>hwOn(Date.now())||owns(sl,k)); }
 const HUNT_PLACE={curtain:'за шторой',table:'возле стола',dresser:'возле комода',wardrobe:'возле шкафа',bed:'под кроватью'};
@@ -1795,7 +1845,7 @@ const ST_ACT={
   zoomer:{tree:'Снимает видео «эстетика осени»',pond:'Селфи с утками 📱',bench:'Сидит на лавочке в телефоне',swing:'Снимает видео на качелях'},
   alpha:{tree:'Ищет жуков под деревом',pond:'Пускает кораблик',bench:'Прыгает по лавочке',swing:'Качели! Выше! Ещё выше! 🎢'}};
 function treats(p){ const T=[['icecream','Мороженое 🍦',2],['pie','Пирожок 🥟',2]];
-  T.push(p.type==='cat'?['fish','Рыбка 🐟',2]:p.type==='dog'?['bone','Косточка 🦴',2]:p.type==='hamster'?['seeds','Семечки 🌻',1]:(p.type==='lifter'||p.type==='trainer')?['bar','Протеиновый батончик',2]:['candy','Леденец 🍭',1]); return T; }
+  const R=RL(p); T.push(R==='cat'?['fish','Рыбка 🐟',2]:R==='dog'?['bone','Косточка 🦴',2]:R==='hamster'?['seeds','Семечки 🌻',1]:(R==='lifter'||R==='trainer'||R==='strongman')?['bar','Протеиновый батончик',2]:['candy','Леденец 🍭',1]); return T; }
 const shopOpen=t=>{ const h=new Date(t).getHours(); return h>=8&&h<22; };
 function hashN(str){ let h=2166136261; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return (h>>>0)/4294967296; }
 const isRain=t=>{ const d=new Date(t); return !isNight(t)&&hashN('rain'+d.toDateString()+d.getHours())<.18; };
@@ -1831,12 +1881,12 @@ function tapStreet(k){
     else { p.msg='Тут его нет. Ищи дальше.'; sfx('no'); }
     save(); render(); return; }
   if(k==='shop'){ if(!shopOpen(t)){ p.msg='Магазин закрыт. Работает с 8:00 до 22:00.'; sfx('no'); } else { view='shop'; p.stX=ST_X.shop+40; sfx('click'); } render(); return; }
-  if(k==='scales'){ p.stX=ST_X.scales; const w=weightText(p); if(p.type==='lifter'&&p.stage!=='baby'){ const c=CH.lifter, kg=(isF(p)?c.baseF:c.base)+p.extra, cap=isF(p)?c.catF:c.cat;
-      p.msg='Весы у аптеки: '+kg.toFixed(1).replace('.',',')+' кг. '+(kg<=cap?'Категория до '+cap+' — влезаешь ✅':'Перевес '+(kg-cap).toFixed(1).replace('.',',')+' кг! До категории '+cap+' надо сгонять ⚠️')+(p.meetAt?' До соревнований '+dur(Math.max(0,p.meetAt-t))+'.':''); }
+  if(k==='scales'){ p.stX=ST_X.scales; const w=weightText(p); if(RL(p)==='lifter'&&p.stage!=='baby'){ const WI=weighIn(p);
+      p.msg='Весы у аптеки: '+WI.text+'. '+(WI.ok?'Категория '+WI.cap+' — влезаешь ✅':'Перевес: '+WI.over+'! Надо сгонять ⚠️')+(p.meetAt?' До соревнований '+dur(Math.max(0,p.meetAt-t))+'.':''); }
     else p.msg='Весы у аптеки показывают '+w+'.'; sfx('click'); save(); render(); return; }
-  if(k==='pjt'){ p.stX=ST_X.pjt; if(p.type==='lifter'){ p.outside=false; camX=null; view='style'; styleTab='pjt'; styleSel=null; styleNote='Добро пожаловать в магазин ПЖТ!'; p.msg='Зашли в магазин ПЖТ.'; }
+  if(k==='pjt'){ p.stX=ST_X.pjt; if(RL(p)==='lifter'&&CH[p.type].human){ p.outside=false; camX=null; view='style'; styleTab='pjt'; styleSel=null; styleNote='Добро пожаловать в магазин ПЖТ!'; p.msg='Зашли в магазин ПЖТ.'; }
     else p.msg='Витрина ПЖТ: пояса, бинты и трико для лифтёров.'; sfx('click'); save(); render(); return; }
-  const A=ST_ACT[p.type]||ST_ACT.cat; if(!A[k]) return;
+  const A=ST_ACT[RL(p)]||ST_ACT.cat; if(!A[k]) return;
   p.stX=ST_X[k]; p.stCd=p.stCd||{};
   if(t-(p.stCd[k]||0)<15*MIN){ p.msg=A[k]+'. Уже было недавно, попробуй что-то другое.'; sfx('click'); save(); render(); return; }
   p.stCd[k]=t; p.stats.happy=clamp(p.stats.happy+8); p.msg=A[k]+'.'.replace(/^\.$/, ''); p.msg=A[k]; if(p.stats.happy>40) resolveEv(p,'bored'); p.pop=(p.pop||0)+1; p.reactUntil=t+2500; sfx('happy'); save(); render();
@@ -1943,13 +1993,17 @@ function hearts(v){const n=Math.ceil(v/25);return '♥'.repeat(n)+'♡'.repeat(4
 function renderStatus(p){
   const s=p.stats;
   $('statView').innerHTML=[
-    ['Возраст',dur(Date.now()-p.born)],['Стадия',stageName(p)]].concat(p.breed?[['Порода',breedOf(p.type,p.breed).name]]:[]).concat([['Вес',weightText(p)],
+    ['Возраст',dur(Date.now()-p.born)],['Стадия',stageName(p)]].concat(p.role&&p.role!==p.type?[['Вид',bodyTitle(p)]]:[]).concat(p.breed?[['Порода',breedOf(p.type,p.breed).name]]:[]).concat([['Вес',weightText(p)],
     ['Здоровье','<span class="hearts">'+hearts(s.health)+'</span>'],['Сытость','<span class="hearts">'+hearts(s.hunger)+'</span>'],['Настроение','<span class="hearts">'+hearts(s.happy)+'</span>'],
-    ['Дисциплина',Math.round(s.disc)+'%']].concat(p.revives?[['Жизнь','вторая попытка ('+p.revives+')']]:[]).concat((S.beds||0)>0?[['Ночей на кровати',S.beds]]:[])).concat(p.type==='lifter'?[['Весовая категория','до '+(isF(p)?CH.lifter.catF:CH.lifter.cat)+' кг'],['Медали',p.medals||0],['Соревнования',p.meetOpen?'сегодня! выходи на помост':p.meetAt&&p.stage!=='baby'?'через '+dur(Math.max(0,p.meetAt-Date.now())):'после взросления'],['Сегодня в зале',p.stage!=='baby'?(()=>{const P=todayProgram(p);return LIFTS[P[0]].toLowerCase()+' '+P[1];})():'—']]:[]).concat([
+    ['Дисциплина',Math.round(s.disc)+'%']].concat(p.revives?[['Жизнь','вторая попытка ('+p.revives+')']]:[]).concat((S.beds||0)>0?[['Ночей на кровати',S.beds]]:[])).concat(RL(p)==='lifter'?[['Весовая категория',weighIn(p).cap],['Медали',p.medals||0],['Соревнования',p.meetOpen?'сегодня! выходи на помост':p.meetAt&&p.stage!=='baby'?'через '+dur(Math.max(0,p.meetAt-Date.now())):'после взросления'],['Сегодня в зале',p.stage!=='baby'?(()=>{const P=todayProgram(p);return LIFTS[P[0]].toLowerCase()+' '+P[1];})():'—']]:[]).concat([
   ]).map(([a,b])=>`<div class="row"><span>${a}</span><span>${b}</span></div>`).join('')+
     `<div class="hint2">♥♥♥♥ — всё отлично, ♡♡♡♡ — срочно позаботься. Одна еда или игра даёт одно сердечко.</div>`+
+    (p.stage!=='baby'&&!p.dormant?(p.morph?`<div class="evo"><b>✨ Превращение в: ${(isF(p)&&CH[p.morph.to].titleF?CH[p.morph.to].titleF:CH[p.morph.to].title).toLowerCase()}</b><span>Пройдено шагов: ${p.morph.step} из 3.</span><span>Следующий шаг: «${MORPH.steps[p.morph.to][p.morph.step]}» · ${MORPH.price[p.morph.step]} монет${Date.now()<(p.morph.next||0)?' · доступно через '+dur(p.morph.next-Date.now()):''}</span><button id="morphNext" type="button">Сделать шаг</button></div>`
+      :`<div class="evo"><b>✨ Превращение</b><span>${esc(p.name)} может стать кем-то другим. Три шага по ${MORPH.price.join(' / ')} монет, между шагами 12 часов. Имя, возраст и характер останутся.</span><div class="lcdbtns">${morphTargets(p).map(t=>`<button type="button" data-morph="${t}" style="flex:1 1 30%;padding:8px 6px;font-size:13px">${isF(p)&&CH[t].titleF?CH[t].titleF:CH[t].title}</button>`).join('')}</div></div>`):'')+
     (p.eternal?`<div class="evo"><b>♾ Вечный</b><span>Он не умрёт. Если о нём забыть, уснёт и будет ждать тебя. Можно отправить его в Зал славы и завести второго питомца — обычного.</span><button id="hallBtn" type="button">🏛 Отправить в Зал славы</button></div>`
      :!S.eternalUsed&&!S.hall?`<div class="evo"><b>♾ Вечный питомец</b><span>Сделай ${esc(p.name)} вечным: он больше не умрёт — если о нём забыть, он уснёт и будет ждать тебя. Потом его можно отправить в Зал славы и завести второго. <b>Только один-единственный раз за всю игру</b> — для одного питомца и только пока он жив.</span><button id="eternalBtn" type="button">Сделать вечным · ${PAY.eternal} ⭐</button></div>`:'');
+  $('statView').querySelectorAll('[data-morph]').forEach(b=>b.onclick=()=>{ const t=b.dataset.morph; askConfirm('Превратить '+p.name+' в: '+(isF(p)&&CH[t].titleF?CH[t].titleF:CH[t].title).toLowerCase()+'? Три шага по '+MORPH.price.join(' / ')+' монет, между шагами 12 часов. Первый шаг — сейчас.','Начать',()=>{ p.morph={to:t,step:0,next:0}; morphStep(p); if(p.morph&&p.morph.step===0) p.morph=null; save(); render(); }); });
+  const mn=$('morphNext'); if(mn) mn.onclick=()=>{ morphStep(p); save(); render(); };
   const eb=$('eternalBtn'), hb=$('hallBtn');
   if(eb) eb.onclick=()=>askConfirm('Сделать '+p.name+' вечным за '+PAY.eternal+' ⭐?\n\nЭто можно сделать только один раз за всю игру — потом ни для одного другого питомца купить уже не получится.','Да, сделать вечным',()=>act('eternal'));
   if(hb) hb.onclick=()=>askConfirm('Отправить '+p.name+' в Зал славы? Дома станет пусто, и ты сможешь завести нового питомца. Забрать '+p.name+' обратно можно, когда дома никого не будет.','Отправить',()=>act('hall'));
@@ -1992,11 +2046,11 @@ function render(){
   $('vGame').hidden=!p;
   $('vDead').hidden=!!p||!S.lastDead;
   if(p){
-    const c=CH[p.type];
+    const c=CH[RL(p)];
     $('gName').textContent=p.name;
-    $('gStage').textContent=stageName(p);
+    $('gStage').textContent=stageName(p)+(p.role&&p.role!==p.type?' · '+bodyTitle(p):'');
     const age=Date.now()-p.born, cr=care(p);
-    dailyCoins();
+    dailyCoins(); bdayCheck();
     if(p.stage==='baby'){ const left=HOUR-age; $('gSub').innerHTML=`<span>Вырастет через <b>${Math.max(1,Math.ceil(left/MIN))} мин</b>${p.asleep&&isNight(Date.now())?' · на паузе до 7:00':''}</span><span>Успел на зов: <b>${cr.ok1} из ${cr.total1}</b></span><div class="bar"><span style="width:${Math.min(100,age/HOUR*100)}%"></span></div>`; }
     else if(p.stage==='teen'){ $('gSub').innerHTML=`<span>Станет взрослым через <b>${dur(ADULT_AT-age)}</b></span><span>Успел: <b>${cr.ok} из ${cr.total}</b></span>`; }
     else $('gSub').innerHTML=`<span>Возраст <b>${dur(age)}</b></span>`;
@@ -2004,7 +2058,13 @@ function render(){
     if(!hwNow&&S.pumpkins&&new Date().getMonth()===10){ S.pumpkins=0; save(); }
     if(hwNow){ const d=new Date(); if(d.getMonth()===9&&d.getDate()===31&&!S.hwGift){ S.hwGift=true; if(!owns('hat','witch')) S.owned=(S.owned||[]).concat(['hat:witch']); coinToast='Подарок на Хэллоуин: шляпа ведьмы! Она в «стиле» 🎃'; coinToastAt=Date.now(); save(); } }
     const H=hwNow?hunt(p):null; $('hwBadge').hidden=!H||!!mg||p.stage==='baby'; if(H) $('hwBadge').textContent='🎃 '+H.found.length+'/3';
+    if(S.bdNote&&!p.evoNote){ p.evoNote={title:'🎂 С днём рождения!',why:'Это тебе: именная корона дня рождения '+S.bdNote+'. Такой нет больше ни у кого.',hint:'Надень её в «стиле» → Шапки.'}; S.bdNote=null; save(); }
     if(!p.evoNote&&hwNow&&!S.hwIntro&&p.stage!=='baby'){ $('evo').hidden=false; $('evo').innerHTML=`<b>🎃 В игре Хэллоуин! До 1 ноября</b><span>Каждый день в комнате прячутся 3 тыквы. Присмотрись к мебели: где-то торчит хвостик и что-то светится. Нажми туда — и тыква твоя.</span><span>Тыквы — праздничная валюта: в «стиле» на них покупаются костюмы. 2 ноября тыквы исчезнут, а костюмы останутся навсегда.</span><span>31-го будет золотая тыква, а вечером кто-то постучит в дверь…</span><button id="evoOk" type="button">Искать тыквы!</button>`; $('evoOk').onclick=()=>{S.hwIntro=true;save();render();}; }
+    else if(!p.evoNote&&p.stage!=='baby'&&!S.bday&&!(S.bdAskAfter>Date.now())){ $('evo').hidden=false;
+      $('evo').innerHTML=`<b>🎂 Когда у тебя день рождения?</b><span>В этот день тебя будет ждать подарок, которого больше ни у кого нет. Дату можно указать только один раз.</span><div style="display:flex;gap:8px"><select id="bdD">${Array.from({length:31},(_,i)=>`<option>${i+1}</option>`).join('')}</select><select id="bdM">${['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'].map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}</select></div><div style="display:flex;gap:8px"><button id="bdOk" type="button">Сохранить</button><button id="bdLater" type="button" style="background:#9aa0a6">Позже</button></div>`;
+      $('bdLater').onclick=()=>{ S.bdAskAfter=Date.now()+3*DAY; save(); render(); };
+      $('bdOk').onclick=()=>{ const d=+$('bdD').value, m=+$('bdM').value; const v=String(d).padStart(2,'0')+'.'+String(m).padStart(2,'0');
+        askConfirm('Твой день рождения — '+d+' '+$('bdM').selectedOptions[0].text+'? Изменить потом будет нельзя.','Да, верно',()=>{ S.bday=v; save(); render(); if(tgInit()) api('/birthday',{day:d,month:m}).then(r=>{ if(r&&r.bday){ S.bday=r.bday; save(); render(); } }); bdayCheck(); }); }; }
     else if(p.evoNote){ $('evo').hidden=false; $('evo').innerHTML=`<b>${esc(p.evoNote.title)}</b><span>${p.evoNote.why}</span><span>${fem(p.evoNote.hint,p.sex)}</span><button id="evoOk" type="button">Понятно</button>`; $('evoOk').onclick=()=>{p.evoNote=null;save();render();}; } else $('evo').hidden=true;
     { const T=totInfo(p,Date.now()); if(T&&Date.now()>=T.at&&Date.now()<T.until&&S.tot!==T.key&&!p.asleep&&!p.totMsg){ p.totMsg=T.key; p.msg='Тук-тук! Кто-то стучит в дверь… 🎃'; p.msgRaw=true; sfx('call'); } }
     $('styleBtn').textContent=view==='style'?'закрыть стиль':'стиль · '+(S.coins||0); $('styleBtn').hidden=!!mg||!!p.outside; $('styleBtn').onclick=()=>act('style');
@@ -2046,17 +2106,18 @@ function render(){
     }
     else if(view==='style'){
       let pr=priceOf(styleTab,styleSel), cur=(p.look||{})[styleTab]||'default', same=styleSel===cur, lab=pr+' '+coinWord(pr);
-      if(styleTab!=='hw'&&styleTab!=='pjt'&&styleTab!=='room'&&(styleSel==='default'||owns(styleTab,styleSel))) lab='бесплатно, уже твоё';
+      if(styleTab!=='hw'&&styleTab!=='pjt'&&styleTab!=='room'&&styleTab!=='role'&&(styleSel==='default'||owns(styleTab,styleSel))) lab='бесплатно, уже твоё';
+      if(styleTab==='role'&&styleSel){ const [a,b]=styleSel.split(':'); same=a==='off'?!roleKit(p).some(([sl,k])=>(p.look||{})[sl]===k):(p.look||{})[a]===b; lab='бесплатно'; }
       if(styleTab==='room'&&styleSel){ const [a,b]=styleSel.split(':'); if(a==='reset'){ same=!Object.keys(S.room||{}).length; lab='бесплатно'; } else { const it=ROOM_ITEMS.find(x=>x[0]===a&&x[1]===b); same=(S.room||{})[a]===b; pr=it?it[3]:0; lab=owns('room_'+a,b)?'бесплатно, уже твоё':pr+' '+coinWord(pr); } }
       if(styleTab==='pjt'&&styleSel){ const [a,b]=styleSel.split(':'); if(a==='none'){ same=!Object.keys(p.look||{}).some(k=>k.startsWith('pjt_')); lab='бесплатно'; } else { const it=pjtItems(p).find(x=>x[0]===a&&x[1]===b); same=(p.look||{})[a]===b; pr=it?it[3]:0; lab=owns(a,b)?'бесплатно, уже твоё':pr+' '+coinWord(pr); } }
       if(styleTab==='hw'&&styleSel){ const [a,b]=styleSel.split(':'), it=hwItems(p).find(x=>x[0]===a&&x[1]===b); same=(p.look||{})[a]===b; pr=it?it[3]:0; lab=owns(a,b)?'бесплатно, уже твоё':(S.pumpkins||0)>=pr?pr+' 🎃':pr*2+' монет (тыкв мало)'; }
-      html=`<button class="btn" data-a="applyStyle" style="grid-column:span 2" ${same?'disabled':''}>${styleTab==='room'?(styleSel==='reset:all'?'Вернуть':!same&&!owns('room_'+styleSel.split(':')[0],styleSel.split(':')[1])?'Купить':'Поставить'):styleTab==='pjt'&&styleSel==='none:none'?'Снять':styleTab==='hw'||styleTab==='pjt'?(styleSel&&!same&&!owns(...styleSel.split(':'))?'Купить':'Надеть'):(styleSel==='default'||owns(styleTab,styleSel)?'Надеть':'Купить')}<small>${same?'уже надето':lab}</small></button><button class="btn" data-a="back">Назад</button>`;
+      html=`<button class="btn" data-a="applyStyle" style="grid-column:span 2" ${same?'disabled':''}>${styleTab==='role'?(styleSel==='off:all'?'Снять':'Надеть'):styleTab==='room'?(styleSel==='reset:all'?'Вернуть':!same&&!owns('room_'+styleSel.split(':')[0],styleSel.split(':')[1])?'Купить':'Поставить'):styleTab==='pjt'&&styleSel==='none:none'?'Снять':styleTab==='hw'||styleTab==='pjt'?(styleSel&&!same&&!owns(...styleSel.split(':'))?'Купить':'Надеть'):(styleSel==='default'||owns(styleTab,styleSel)?'Надеть':'Купить')}<small>${same?'уже надето':lab}</small></button><button class="btn" data-a="back">Назад</button>`;
     }
     else if(view==='tot'){
       html=`<button class="btn" data-a="totYes" style="grid-column:span 2">Дать конфеты 🍬<small>сладость</small></button><button class="btn" data-a="totNo">Не открывать<small>гадость</small></button>`;
     }
     else if(view==='games'){
-      html=`<button class="btn" data-a="g_own">${c.game}<small>своя игра</small></button><button class="btn" data-a="g_catch">Поймай<small>${CATCH[p.type].good} ловить</small></button><button class="btn" data-a="g_pairs">Найди пару<small>карточки</small></button><button class="btn" data-a="g_ttt">Крестики-нолики<small>против ${isF(p)?'неё':'него'}</small></button><button class="btn" data-a="back" style="grid-column:span 2">Назад</button>`;
+      html=`<button class="btn" data-a="g_own">${c.game}<small>своя игра</small></button><button class="btn" data-a="g_catch">Поймай<small>${CATCH[RL(p)].good} ловить</small></button><button class="btn" data-a="g_pairs">Найди пару<small>карточки</small></button><button class="btn" data-a="g_ttt">Крестики-нолики<small>против ${isF(p)?'неё':'него'}</small></button><button class="btn" data-a="back" style="grid-column:span 2">Назад</button>`;
     }
     else if(view==='food'){
       const f=foods(p);
@@ -2071,7 +2132,7 @@ function render(){
         <button class="btn" data-a="heal">Лечить<small>таблетка</small></button>
         <button class="btn" data-a="light">Свет<small>${p.light?'вкл':'выкл'}</small></button>
         <button class="btn" data-a="scold" ${z?'disabled':''}>Отругать<small>воспитание</small></button>
-        ${(()=>{const h=new Date().getHours(); return p.stage!=='baby'&&!p.dormant&&!p.onBed&&(h>=21||(p.asleep&&isNight(Date.now())))&&view!=='status'?'<button class="btn wide" data-a="bed">'+((S.beds||0)>0?'🛏 Уложить на кровать<small>утром будет +настроение · осталось '+S.beds+'</small>':'🛏 Спать на кровати<small>'+PAY.bedNights+' ночей за '+PAY.bedStars+' ⭐ · утром +настроение</small>')+'</button>':'';})()}${(()=>{const T=totInfo(p,Date.now());return T&&Date.now()>=T.at&&Date.now()<T.until&&S.tot!==T.key&&!p.asleep&&view!=='status'?'<button class="btn wide" data-a="tot">🚪 Тук-тук! Открыть дверь</button>':'';})()}${p.type==='lifter'&&p.meetOpen&&view!=='status'?'<button class="btn wide" data-a="meet">🏆 Выступить на соревнованиях</button>':''}<button class="btn wide" data-a="status">${view==='status'?'Назад к нему':'Состояние'}</button>`;
+        ${(()=>{const h=new Date().getHours(); return p.stage!=='baby'&&!p.dormant&&!p.onBed&&(h>=21||(p.asleep&&isNight(Date.now())))&&view!=='status'?'<button class="btn wide" data-a="bed">'+((S.beds||0)>0?'🛏 Уложить на кровать<small>утром будет +настроение · осталось '+S.beds+'</small>':'🛏 Спать на кровати<small>'+PAY.bedNights+' ночей за '+PAY.bedStars+' ⭐ · утром +настроение</small>')+'</button>':'';})()}${(()=>{const T=totInfo(p,Date.now());return T&&Date.now()>=T.at&&Date.now()<T.until&&S.tot!==T.key&&!p.asleep&&view!=='status'?'<button class="btn wide" data-a="tot">🚪 Тук-тук! Открыть дверь</button>':'';})()}${RL(p)==='lifter'&&p.meetOpen&&view!=='status'?'<button class="btn wide" data-a="meet">🏆 Выступить на соревнованиях</button>':''}<button class="btn wide" data-a="status">${view==='status'?'Назад к нему':'Состояние'}</button>`;
     }
     if($('actions').dataset.h!==html){$('actions').innerHTML=html;$('actions').dataset.h=html;}
     $('actions').querySelectorAll('button').forEach(x=>x.onclick=()=>{ if(x.dataset.sh){ simulate(); if(S.pet){ buyTreat(S.pet,x.dataset.sh); save(); } render(); return; } if(x.dataset.en){ simulate(); if(S.pet){ encChoice(S.pet,x.dataset.en==='1'); save(); } render(); return; } if(x.dataset.r==='name'){ const v=($('relName').value||'').trim(); if(!v){ $('relErr').textContent='Напиши имя, чтобы познакомиться.'; return; } simulate(); if(S.pet){ nameRel(S.pet,v); save(); } render(); return; } if(x.dataset.r){ if(x.dataset.r!=='status2'){ simulate(); if(S.pet){ relAct(S.pet,x.dataset.r); save(); } render(); } } else act(x.dataset.a); });
