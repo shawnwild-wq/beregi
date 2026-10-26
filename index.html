@@ -105,6 +105,10 @@ body{background:radial-gradient(120% 80% at 50% 0%,var(--page),var(--page-2));co
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .grid3 button{aspect-ratio:1;min-height:64px;border:3px solid var(--ink);background:transparent;border-radius:6px;cursor:pointer;font-size:22px;color:var(--ink);font-family:var(--f-body)}
 .lcdbtns{display:flex;gap:8px;flex-wrap:wrap}
+.cfield{position:relative;height:230px;border:3px solid var(--ink);border-radius:10px;overflow:hidden;background:#fff6e4;touch-action:none}
+.cfield .it{position:absolute;top:-40px;font-size:30px;line-height:1;cursor:pointer;user-select:none;padding:4px}
+.pairs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.pairs button{aspect-ratio:1;font-size:30px;border:3px solid var(--ink);border-radius:10px;background:var(--ink);cursor:pointer}.pairs button.up{background:#fffaf0}.pairs button.ok{background:#dff3d6}
+.ttt{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:240px;margin:0 auto}.ttt button{aspect-ratio:1;font:700 34px Rubik,sans-serif;border:3px solid var(--ink);border-radius:10px;background:#fffaf0;cursor:pointer;color:var(--ink)}
 .lcdbtns button,.lcdbtn{flex:1 1 120px;font-family:var(--f-body);font-weight:700;background:var(--ink);color:var(--lcd);border:0;border-radius:12px;padding:12px 10px;font-size:15px;cursor:pointer}
 .actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .btn{font-family:var(--f-body);font-weight:700;font-size:14px;background:var(--btn);color:var(--btn-ink);border:0;border-radius:16px;padding:10px 6px;cursor:pointer;
@@ -168,6 +172,7 @@ input#petName{font-family:var(--f-body);font-size:17px;padding:12px;border-radiu
   <section id="vChoose" class="device" hidden>
     <div class="hint">Выбери, о ком будешь заботиться. Первый час малыш зовёт часто. Время идёт по-настоящему, даже когда игра закрыта.</div>
     <div class="sexrow" id="sexRow" role="group" aria-label="Пол"><button type="button" class="sexbtn" data-sex="m"></button><button type="button" class="sexbtn" data-sex="f"></button></div>
+    <div class="sexrow" id="lookRow" role="group" aria-label="Внешность" hidden><button type="button" class="sexbtn lookbtn" data-look="hair">С волосами</button><button type="button" class="sexbtn lookbtn" data-look="bald">Лысый с бородой</button></div>
     <div class="picks" id="picks"></div>
     <label class="f" for="petName"><span id="nameLbl">Как его зовут?</span>
       <input id="petName" maxlength="18" placeholder="Например, Гена" autocomplete="off">
@@ -292,7 +297,25 @@ CH.lifter={title:'Лифтёр',titleF:'Лифтёрша',human:true,base:90,bas
     eat:['Набрал калорий. Сила растёт.','Двойная порция. Это для дела.','Ел — значит тренировался.'],
     treat:['Зефир! Лифтёрам можно.','Ещё зефирку, пока тренер не видит.'],
     cleaned:'Блины по местам. Штанга свободна.'};
-const ORDER=['trainer','lifter','office','student','cat','dog','hamster','zoomer','alpha'];
+CH.strongman={title:'Стронгмен',titleF:'Стронгвумен',human:true,base:130,w:{meal:0,snack:1.5,game:1,burn:2},fatDiv:4,
+    names:{baby:'Малыш-силач',teen:'Подающий надежды',teenBad:'Ленивый богатырь',good:'Самый сильный человек',bad:'Добрый великан'},
+    namesF:{baby:'Малышка-силачка',teen:'Подающая надежды',teenBad:'Ленивая богатырша',good:'Самая сильная женщина',bad:'Добрая великанша'},
+    food:{baby:['Каша','Пончик'],big:['Стейк','Торт']},
+    game:'Камни',clean:'Убрать камни',mess:'plates',
+    calls:['Хочет поднять камень побольше','Ищет, что бы ещё сдвинуть','Требует тарелку мяса','Опять порвал футболку'],
+    eat:['Мясо! Сила растёт.','Ещё порцию. Это для дела.','Три тарелки — разминка.'],
+    treat:['Торт целиком. Это читмил.','Ещё кусочек, ему можно.'],
+    cleaned:'Камни на местах. Пол выдержал.'};
+CH.thai={title:'Тайский боец',titleF:'Тайская боксёрша',human:true,base:68,w:{meal:0,snack:.6,game:.6,burn:1.5},fatDiv:3,
+    names:{baby:'Малыш-драчун',teen:'Ученик',teenBad:'Задира',good:'Чемпион стадиона',bad:'Вечный спарринг-партнёр'},
+    namesF:{baby:'Малышка-драчунья',teen:'Ученица',teenBad:'Задира',good:'Чемпионка стадиона',bad:'Вечная спарринг-партнёрша'},
+    food:{baby:['Рисовая каша','Банан'],big:['Рис с курицей','Манго с рисом']},
+    game:'Комбинация',clean:'Смотать бинты',mess:'sock',
+    calls:['Бинты размотались','Хочет бить грушу в 6 утра','Спорит, что лоу-кик лучше джеба','Требует новые перчатки'],
+    eat:['Рис и курица — еда чемпионов.','Сил прибавилось.'],
+    treat:['Манго! Сладкое, как победа.','Ещё кусочек манго.'],
+    cleaned:'Бинты смотаны и сохнут.'};
+const ORDER=['trainer','lifter','strongman','thai','office','student','cat','dog','hamster','zoomer','alpha'];
 CH.trainer.titleF='Фитнес-тренер'; CH.trainer.namesF={baby:'Стажёрка',teen:'Юная тренерша',teenBad:'Ленивая тренерша',good:'Тренер-чемпионка',bad:'Диванная тренерша'};
 CH.office.titleF='Офисная сотрудница'; CH.office.namesF={baby:'Новенькая',teen:'Исполнительная сотрудница',teenBad:'Офисная ворчунья',good:'Начальница отдела',bad:'Вечная помощница'};
 CH.student.titleF='Студентка'; CH.student.namesF={baby:'Первокурсница',teen:'Студентка-зубрила',teenBad:'Прогульщица',good:'Отличница',bad:'Вечная студентка'};
@@ -323,7 +346,7 @@ function load(){
 const PRICE={}, START_COINS=5, WEEK_CAP=15;
 const weekKey=t=>Math.floor((t-Date.UTC(2024,0,1))/(7*DAY));
 let coinToast='';
-Object.assign(PRICE,{hair:5,hat:5,glasses:5,neck:5,top:10,bottom:8,shoes:6,coat:8,pshoes:6});
+Object.assign(PRICE,{beard:5,hair:5,hat:5,glasses:5,neck:5,top:10,bottom:8,shoes:6,coat:8,pshoes:6});
 const RARE={'hat:crown':25,'top:tux':25,'neck:goldchain':20,'neck:pearls':20,'hat:tophat':15,'top:leather':15,'shoes:goldsneakers':15,'glasses:monocle':15,'hat:viking':12,'pshoes:gold':12,'coat:tux':15};
 const priceOf=(tab,k)=>RARE[tab+':'+k]||PRICE[tab]||0;
 function earnFree(n,why){
@@ -360,7 +383,19 @@ const CARE={missAfter:15*MIN, poopSickAfter:4*HOUR, sickWindow:48*HOUR, sickFata
 function sicken(p,t,doses){ if(p.sick) return; p.sick=true; p.doses=doses||1; p.sickSince=t; p.sickMissed=false; p.sickLog=(p.sickLog||[]).filter(x=>t-x<CARE.sickWindow).concat([t]); if(p.stage!=='baby'&&p.sickLog.length>=CARE.sickFatal) p.fatal='болезней'; }
 const stageOf=age=>age<HOUR?'baby':age<ADULT_AT?'teen':'adult';
 function stageName(p){const n=isF(p)?CH[p.type].namesF:CH[p.type].names; if(p.stage==='adult') return n[p.form||'good']; if(p.stage==='teen'&&p.teenForm==='bad') return n.teenBad; return n[p.stage];}
-function foods(p){return CH[p.type].food[p.stage==='baby'?'baby':'big'];}
+const MENU={lifter:['Пельмени','Лазанья','Вареники','Борщ','Плов с мясом','Гречка с курицей','Омлет'],
+  trainer:['Курица с рисом','Рис с рыбой','Творог','Овсянка с ягодами','Индейка с овощами','Омлет из белков'],
+  office:['Бизнес-ланч','Суп дня','Цезарь','Паста','Пицца из офиса','Котлета с пюре'],
+  student:['Шаурма','Доширак','Пельмени','Макароны с сосиской','Гречка','Яичница'],
+  zoomer:['Доставка поке','Бургер','Рамен','Тако','Суши','Боул с авокадо'],
+  alpha:['Наггетсы','Макароны','Котлетка с пюре','Сырники','Супчик','Блинчики'],
+  cat:['Корм','Курочка','Паштет','Индейка','Говядинка','Креветки'],
+  dog:['Корм','Говядина','Курица','Рис с мясом','Индейка','Рубец'],
+  hamster:['Семечки и морковка','Зерновая смесь','Яблочко','Тыквенные семечки','Огурчик','Брокколи'],
+  strongman:['Стейк','Пять яиц','Овсянка с мясом','Ведро курицы','Гречка с говядиной','Шашлык'],
+  thai:['Рис с курицей','Том ям','Пад тай','Рис с рыбой','Курица с овощами','Суп с лапшой']};
+const dayIdx=()=>Math.floor((Date.now()-new Date().getTimezoneOffset()*MIN)/DAY);
+function foods(p){ const f=CH[p.type].food[p.stage==='baby'?'baby':'big']; if(p.stage==='baby'||!MENU[p.type]) return f; const M=MENU[p.type]; return [M[(dayIdx()+Math.floor(p.born/DAY))%M.length],f[1]]; }
 function fatLevel(p){let f=Math.max(0,Math.round(p.extra/CH[p.type].fatDiv)); if(p.form==='bad') f+=2; return Math.min(f,6);}
 function weightText(p){const c=CH[p.type]; if(p.type==='lifter') return ((isF(p)?c.baseF:c.base)+p.extra).toFixed(1)+' кг'; if(p.type==='hamster') return Math.round(HAM_NORM[p.stage]+p.extra)+' г'; const w=(c.human?c.base:(p.type==='dog'?DOG_NORM:CAT_NORM)[p.stage])+p.extra; return (c.human||p.type==='dog'?w.toFixed(1):w.toFixed(2))+' кг';}
 const asleep=p=>p.asleep;
@@ -570,7 +605,7 @@ function forecast(fromNow){
       prev=p.asleep?new Set([...prev,...cur]):new Set(cur);
     }
   } finally { FORECAST=false; }
-  const EMO={cat:'🐱',dog:'🐶',hamster:'🐹',lifter:'🏋️',trainer:'💪',office:'💼',student:'🎓',zoomer:'📱',alpha:'🧒'}[p0.type]||'';
+  const EMO={strongman:'🪨',thai:'🥊',cat:'🐱',dog:'🐶',hamster:'🐹',lifter:'🏋️',trainer:'💪',office:'💼',student:'🎓',zoomer:'📱',alpha:'🧒'}[p0.type]||'';
   return notes.filter(n=>n.at>=fromNow).map(n=>n.third?{at:n.at,text:n.text}:{at:n.at,text:n.text,who:(EMO+' '+nm).trim()});
 }
 window.__beregiForecast=forecast; window.__beregiDbg={S:()=>S,setS:x=>{S=x;},act:(...a)=>act(...a),simulate:()=>simulate(),needs:p=>needs(p),tapSpot:k=>tapSpot(k),tapStreet:k=>tapStreet(k),claimMock:r=>{ const orig=window.fetch; window.fetch=async()=>({json:async()=>r}); window.Telegram={WebApp:{initData:'x'}}; return claim().finally(()=>{window.fetch=orig; delete window.Telegram;}); },resolveEv:(p,t)=>resolveEv(p,t)}; window.__beregiChar=(...a)=>charSVG(...a); window.__beregiWear=()=>WEAR; window.__beregiHairs=()=>HAIRS;
@@ -604,16 +639,26 @@ function tapSpot(spot){
   simulate(); const p=S.pet; if(!p||mg) return; p.msgRaw=false;
   if(hwOn(Date.now())){ const H=hunt(p); if(H.spots.includes(spot)&&!H.found.includes(spot)){ H.found.push(spot); const g=H.gold===spot; S.pumpkins=(S.pumpkins||0)+(g?5:1);
     p.msg=(g?'Золотая тыква! +5 🎃':'Нашёл тыкву! +1 🎃')+' ('+H.found.length+'/3)'+(H.found.length>=3?' Все тыквы на сегодня собраны! Завтра спрячутся новые.':''); p.msgRaw=true; sfx('happy'); save(); render(); return; } }
+  if(spot==='lamp'){ act('light'); return; }
+  if(spot==='fridge'){ furnOpen.fridge=Date.now()+2600; setTimeout(()=>{ sceneKey=''; render(); },2700); if(p.hidden){ p.msg='В холодильнике его нет. Только еда.'; sfx('no'); save(); render(); return; } if(!p.asleep){ view='food'; p.msg='Холодильник открыт. Что дадим?'; } else p.msg='Ночью холодильник лучше не трогать 🌙'; sfx('click'); save(); render(); return; }
   if(p.asleep&&!p.hidden){p.msg='Тсс, он спит.';render();return;}
   if(spot==='wardrobe'&&!p.hidden&&knock(p)){ camX=null; save(); render(); return; }
   if(p.hidden===spot){ p.hidden=null; p.lastHideAt=Date.now(); walkX=SPOTS[spot].x; p.stats.happy=clamp(p.stats.happy+25); p.msg='Нашёл! Он хихикает и выбегает.'; resolveEv(p,'hide'); if(!p.pop) p.pop=1; }
   else if(p.hidden){ p.msg='Тут его нет. Ищи дальше.'; sfx('no'); }
-  else { p.msg='Тут пусто. '+(spot==='wardrobe'?'Только одежда.':spot==='bed'?'Только пыль.':'Только крошки.'); sfx('click'); }
+  else { const open=k=>{ furnOpen[k]=Date.now()+2600; setTimeout(()=>{ sceneKey=''; render(); },2700); };
+    if(spot==='wardrobe'){ open('wardrobe'); const n=(S.owned||[]).length; p.msg=n?'В шкафу висит твой гардероб: вещей — '+n+'.':'Шкаф почти пустой. Загляни в «стиль».'; }
+    else if(spot==='dresser'){ open('dresser'); p.msg='В комоде носки и футболки. Всё на месте.'; }
+    else if(spot==='bed'){ S.bedMessy=!S.bedMessy; p.msg=S.bedMessy?'Одеяло скомкано.':'Кровать заправлена. Красота.'; }
+    else if(spot==='curtain'){ S.curtOpen=!S.curtOpen; p.msg=S.curtOpen?'Штора открыта.':'Штора задёрнута.'; }
+    else if(spot==='table') p.msg='На столе чашка и яблоко.';
+    sfx('click'); }
   save(); render();
 }
-function styleTabs(p){ const hw=(hwItems(p).length?[['hw','🎃 Хэллоуин']]:[]).concat(p.type==='lifter'?[['pjt','🏋️ ПЖТ']]:[]); return hw.concat(CH[p.type].human?[['hair','Причёска'],['hat','Шапки'],['glasses','Очки'],['neck','Шея'],['top','Верх'],['bottom','Низ'],['shoes','Обувь']]:[['hat','Шапки'],['glasses','Очки'],['neck','Шея'],['coat','Одёжка'],['pshoes','Обувь']]); }
+function canBeard(p){ return CH[p.type].human&&p.type!=='alpha'&&p.stage!=='baby'&&!isF(p); }
+function styleTabs(p){ const hw=[['room','🏠 Комната']].concat(hwItems(p).length?[['hw','🎃 Хэллоуин']]:[]).concat(p.type==='lifter'?[['pjt','🏋️ ПЖТ']]:[]); return hw.concat(CH[p.type].human?[['hair','Причёска']].concat(canBeard(p)?[['beard','Борода']]:[]).concat([['hat','Шапки'],['glasses','Очки'],['neck','Шея'],['top','Верх'],['bottom','Низ'],['shoes','Обувь']]):[['hat','Шапки'],['glasses','Очки'],['neck','Шея'],['coat','Одёжка'],['pshoes','Обувь']]); }
 function styleOpts(p,tab){
   if(tab==='hw') return hwItems(p).map(([sl,k,n])=>[sl+':'+k,n]);
+  if(tab==='room') return ROOM_ITEMS.map(([sl,k,n])=>[sl+':'+k,n]).concat([['reset:all','Как было']]);
   if(tab==='pjt') return pjtItems(p).map(([sl,k,n])=>[sl+':'+k,n]).concat([['none:none','Снять экипировку']]);
   const L=[['default','Без']]; if(tab==='hair'){ L[0][1]='Как было'; Object.entries(HAIRS).forEach(e=>L.push(e)); return L; }
   Object.entries(WEAR[tab]||{}).forEach(([k,v])=>{ if((F_ONLY[tab]||[]).includes(k)&&!isF(p)) return; if(tab==='neck'&&k==='collar'&&CH[p.type].human) return; L.push([k,v]); });
@@ -621,7 +666,7 @@ function styleOpts(p,tab){
 }
 function renderStyle(p){
   if(!styleTab) styleTab=styleTabs(p)[0][0];
-  const SET=styleTab==='hw'||styleTab==='pjt', HW=styleTab==='hw', PJ=styleTab==='pjt';
+  const SET=styleTab==='hw'||styleTab==='pjt'||styleTab==='room', HW=styleTab==='hw', PJ=styleTab==='pjt', RM=styleTab==='room';
   if(styleSel==null) styleSel=SET?(styleOpts(p,styleTab)[0]||[''])[0]:(p.look||{})[styleTab]||'default';
   const hsl=SET?styleSel.split(':'):null;
   let look=SET?(hsl[0]==='none'?Object.assign({},p.look||{}):wearOn(p.look,hsl[0],hsl[1])):wearOn(p.look,styleTab,styleSel);
@@ -630,9 +675,9 @@ function renderStyle(p){
   const m=p.sick?'sick':'happy';
   $('styleView').innerHTML=`<div class="bal"><span class="coin"><i></i>${S.coins||0} ${coinWord(S.coins||0)}${HW?' · 🎃 '+(S.pumpkins||0):''}</span><button class="topup" id="topup" type="button">Пополнить</button></div>
     <div class="tabs">${styleTabs(p).map(([k,t])=>`<button type="button" data-tab="${k}" aria-pressed="${k===styleTab}">${t}</button>`).join('')}</div>
-    <div class="pv"><svg viewBox="${vb}" aria-label="Примерка">${charSVG(p.type,p.stage,p.stage==='teen'?p.teenForm:p.form,m,fatLevel(p),p.sex,p.breed,look)}</svg></div>
-    <div class="opts">${styleOpts(p,styleTab).map(([k,t])=>`<button type="button" data-opt="${k}" aria-pressed="${k===styleSel}">${t}<small>${SET?(()=>{const [a,b]=k.split(':'); if(a==='none') return '&nbsp;'; const it=setItems(p,styleTab).find(x=>x[0]===a&&x[1]===b); return (p.look||{})[a]===b?'сейчас':owns(a,b)?'твоё':it[3]+(HW?' 🎃':' мон.');})():k===((p.look||{})[styleTab]||'default')?'сейчас':k==='default'||owns(styleTab,k)?'твоё':priceOf(styleTab,k)+' мон.'}</small></button>`).join('')}</div>
-    <div class="note">${styleNote||(PJ?'Экипировка фирмы ПЖТ — только для лифтёра. Можно надеть всё сразу: трико, пояс, бинты и обувь. Купленное остаётся навсегда.':HW?'Костюмы за тыквы 🎃 продаются только до 1 ноября, а купленные остаются навсегда. Не хватает тыкв — можно за монеты: 1 тыква = 2 монеты.':'Примерка бесплатная. Купленная вещь остаётся у тебя навсегда, даже у следующих питомцев, и переодевать её бесплатно.')}</div>`;
+    <div class="pv">${RM?(()=>{ const [a,b]=styleSel.split(':'); roomPreview=a==='reset'?{}:Object.assign({},S.room||{},{[a]:b}); const sv=sceneSVG(p,'happy',fatLevel(p),false).replace(/viewBox="[^"]*"/,'viewBox="0 0 960 220"'); roomPreview=null; return sv; })():`<svg viewBox="${vb}" aria-label="Примерка">${charSVG(p.type,p.stage,p.stage==='teen'?p.teenForm:p.form,m,fatLevel(p),p.sex,p.breed,look)}</svg>`}</div>
+    <div class="opts">${styleOpts(p,styleTab).map(([k,t])=>`<button type="button" data-opt="${k}" aria-pressed="${k===styleSel}">${t}<small>${SET?(()=>{const [a,b]=k.split(':'); if(a==='none'||a==='reset') return '&nbsp;'; if(RM) return (S.room||{})[a]===b?'сейчас':owns('room_'+a,b)?'твоё':ROOM_ITEMS.find(x=>x[0]===a&&x[1]===b)[3]+' мон.'; const it=setItems(p,styleTab).find(x=>x[0]===a&&x[1]===b); return (p.look||{})[a]===b?'сейчас':owns(a,b)?'твоё':it[3]+(HW?' 🎃':' мон.');})():k===((p.look||{})[styleTab]||'default')?'сейчас':k==='default'||owns(styleTab,k)?'твоё':priceOf(styleTab,k)+' мон.'}</small></button>`).join('')}</div>
+    <div class="note">${styleNote||(RM?'Комната общая для всех твоих питомцев. Купленное остаётся навсегда, менять обратно бесплатно.':PJ?'Экипировка фирмы ПЖТ — только для лифтёра. Можно надеть всё сразу: трико, пояс, бинты и обувь. Купленное остаётся навсегда.':HW?'Костюмы за тыквы 🎃 продаются только до 1 ноября, а купленные остаются навсегда. Не хватает тыкв — можно за монеты: 1 тыква = 2 монеты.':'Примерка бесплатная. Купленная вещь остаётся у тебя навсегда, даже у следующих питомцев, и переодевать её бесплатно.')}</div>`;
   $('styleView').querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{styleTab=b.dataset.tab;styleSel=null;styleNote='';sfx('click');render();});
   $('styleView').querySelectorAll('[data-opt]').forEach(b=>b.onclick=()=>{styleSel=b.dataset.opt;styleNote='';sfx('click');render();});
   $('topup').onclick=()=>{sfx('click');buyCoins();};
@@ -644,6 +689,11 @@ function act(a){
     const pr=it[3]; if(!owns(sl,k)){ if((S.pumpkins||0)>=pr) S.pumpkins-=pr; else if((S.coins||0)>=pr*2) S.coins-=pr*2; else { styleNote='Не хватает: нужно '+pr+' 🎃 (у тебя '+(S.pumpkins||0)+') или '+pr*2+' монет.'; sfx('no'); render(); return; }
       S.owned=(S.owned||[]).concat([sl+':'+k]); styleNote='Куплено: '+it[2]+'! Теперь это твоё навсегда.'; } else styleNote='Надето!';
     p.look=wearOn(p.look,sl,k); p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; save(); render(); return; }
+  if(a==='applyStyle'&&styleTab==='room'){ const [sl,k]=styleSel.split(':');
+    if(sl==='reset'){ S.room={}; styleNote='Комната как была.'; save(); render(); return; }
+    const it=ROOM_ITEMS.find(x=>x[0]===sl&&x[1]===k); if(!it) return; const pr=it[3];
+    if(!owns('room_'+sl,k)){ if((S.coins||0)<pr){ styleNote='Не хватает монет: нужно '+pr+', у тебя '+(S.coins||0)+'.'; sfx('no'); render(); return; } S.coins-=pr; S.owned=(S.owned||[]).concat(['room_'+sl+':'+k]); styleNote='Куплено: '+it[2]+'!'; } else styleNote='Готово!';
+    S.room=Object.assign({},S.room||{},{[sl]:k}); sfx('happy'); save(); render(); return; }
   if(a==='applyStyle'&&styleTab==='pjt'){ const [sl,k]=styleSel.split(':');
     if(sl==='none'){ const L=Object.assign({},p.look||{}); Object.keys(L).forEach(x=>{ if(x.startsWith('pjt_')) delete L[x]; }); p.look=L; styleNote='Экипировка снята.'; save(); render(); return; }
     const it=pjtItems(p).find(x=>x[0]===sl&&x[1]===k); if(!it) return; const pr=it[3];
@@ -668,6 +718,7 @@ function act(a){
     if(a==='snack') sfx('eat');
     if(a==='play'&&mg) sfx('click'); },0);
   if(a==='status'){view=view==='status'?'main':'status';render();return;}
+  if(a.startsWith('g_')){ view='main'; const m=a.slice(2); if(m==='own') startGame(p); else startMini(p,m); save(); render(); return; }
   if(a==='tot'){ view='tot'; render(); return; }
   if(a==='totYes'||a==='totNo'){ const T=totInfo(p,Date.now()); view='main'; if(!T) { render(); return; } S.tot=T.key;
     if(a==='totYes'){ s.happy=clamp(s.happy+25); S.pumpkins=(S.pumpkins||0)+3; p.msg='За дверью дети в костюмах: «Сладость или гадость!» Угостили их конфетами 🍬 Они оставили в подарок 3 тыквы 🎃'; p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; sfx('happy'); }
@@ -708,7 +759,7 @@ function act(a){
   else if(a==='play'){
     if(p.sick) p.msg='Болеет, не до игр.';
     else if(caprice(p)) p.msg=capriceMsg(p,'Не хочет играть. Капризничает.');
-    else { const extra=spoil(p); startGame(p); if(extra) p.msg=extra.trim(); save(); render(); return; }
+    else { const extra=spoil(p); view='games'; if(extra) p.msg=extra.trim(); save(); render(); return; }
   }
   save(); render();
 }
@@ -725,13 +776,18 @@ const RULES={
   cat:'Лазерная точка спряталась. Угадай где.',
   dog:'Ты кинул мяч. Угадай, куда он улетел, и пёс принесёт его.',
   zoomer:'Он снимает видео. Угадай, какое залетит в рекомендации.',
-  alpha:'Он спрятался. Угадай где.'
+  alpha:'Он спрятался. Угадай где.',
+  strongman:'Атласные камни: жми «Поднять!», когда метка в зоне, и камень ляжет на помост. Каждый следующий тяжелее, метка быстрее.',
+  thai:'Тренер показывает комбинацию ударов. Запомни её и повтори по кнопкам.'
 };
 const EXERCISES=['Присед','Жим лёжа','Становая тяга','Выпады','Подтягивания','Отжимания','Жим гантелей','Тяга штанги','Румынская тяга','Ягодичный мост'];
 const MAILS=[['Письмо от начальника: «Срочно!»',1],['Отчёт от бухгалтерии',1],['Договор с клиентом',1],['Счёт от поставщика',1],['Приглашение на планёрку',1],['Заявка от нового клиента',1],['График отпусков на подпись',1],['Жалоба клиента',1],['Акт сверки за квартал',1],['Пароль от рабочей почты истекает завтра',1],
   ['Скидка на пылесосы −90%',0],['Вы выиграли миллион',0],['Гороскоп на неделю',0],['Рассылка «Как похудеть за 3 дня»',0],['Вам оставил наследство дальний родственник',0],['Курс «Стань миллионером за неделю»',0],['Распродажа носков',0],['Опрос «Какой вы сыр?»',0],['Бесплатный круиз, нужно только оплатить налог',0],['Чат «Котики» добавил вас в рассылку',0]];
-const QUIZ=[['Сколько будет 7 × 8?','56','54'],['Столица Австралии?','Канберра','Сидней'],['Кто написал «Войну и мир»?','Толстой','Достоевский'],['Сколько планет в Солнечной системе?','8','12'],['Формула воды?','H₂O','CO₂'],['Самый большой океан?','Тихий','Атлантический'],['Сколько градусов в прямом угле?','90','180'],['Кто открыл закон всемирного тяготения?','Ньютон','Эйнштейн'],['В каком году полетел Гагарин?','1961','1975'],['Самая высокая гора мира?','Эверест','Эльбрус'],['Сколько секунд в часе?','3600','6000'],['Кто нарисовал «Мону Лизу»?','Леонардо да Винчи','Ван Гог'],['Какой газ нужен нам для дыхания?','Кислород','Азот'],['Сколько сторон у шестиугольника?','6','8'],['Столица Казахстана?','Астана','Алматы'],['Сколько дней в високосном году?','366','365'],['Кто автор «Евгения Онегина»?','Пушкин','Лермонтов'],['Какая планета ближе всех к Солнцу?','Меркурий','Марс']];
-const TRENDS=['Танец с котом','Обзор шаурмы','Мой день в 5 утра','Разбор кринжа','Рум-тур общаги','Рецепт за минуту','Эстетика дождя','Пранк над другом','Что в моей сумке','Реакция на старые фото','Утренняя рутина','Распаковка посылки','День без телефона','Пробую еду из автомата'];
+const QUIZ=[['Сколько будет 7 × 8?','56','54'],['Столица Австралии?','Канберра','Сидней'],['Кто написал «Войну и мир»?','Толстой','Достоевский'],['Сколько планет в Солнечной системе?','8','12'],['Формула воды?','H₂O','CO₂'],['Самый большой океан?','Тихий','Атлантический'],['Сколько градусов в прямом угле?','90','180'],['Кто открыл закон всемирного тяготения?','Ньютон','Эйнштейн'],['В каком году полетел Гагарин?','1961','1975'],['Самая высокая гора мира?','Эверест','Эльбрус'],['Сколько секунд в часе?','3600','6000'],['Кто нарисовал «Мону Лизу»?','Леонардо да Винчи','Ван Гог'],['Какой газ нужен нам для дыхания?','Кислород','Азот'],['Сколько сторон у шестиугольника?','6','8'],['Столица Казахстана?','Астана','Алматы'],['Сколько дней в високосном году?','366','365'],['Кто автор «Евгения Онегина»?','Пушкин','Лермонтов'],['Какая планета ближе всех к Солнцу?','Меркурий','Марс'],
+  ['Сколько будет 12 × 12?','144','124'],['Самая длинная река мира?','Нил','Волга'],['Сколько континентов на Земле?','6','9'],['Из чего делают стекло?','Песок','Глина'],['Сколько костей у взрослого человека?','206','306'],['Кто написал «Преступление и наказание»?','Достоевский','Чехов'],
+  ['Столица Японии?','Токио','Пекин'],['Сколько минут в сутках?','1440','1240'],['Какой металл жидкий при комнатной температуре?','Ртуть','Олово'],['Корень из 81?','9','8'],['Сколько игроков в футбольной команде на поле?','11','10'],['Кто изобрёл телефон?','Белл','Эдисон'],
+  ['Самое большое животное?','Синий кит','Слон'],['Сколько сторон у треугольника?','3','4'],['На каком материке Египет?','Африка','Азия'],['Сколько лет в веке?','100','1000'],['Какой цвет получится из синего и жёлтого?','Зелёный','Фиолетовый'],['Столица Кыргызстана?','Бишкек','Ош']];
+const TRENDS=['Танец с котом','Обзор шаурмы','Мой день в 5 утра','Разбор кринжа','Рум-тур общаги','Рецепт за минуту','Эстетика дождя','Пранк над другом','Что в моей сумке','Реакция на старые фото','Утренняя рутина','Распаковка посылки','День без телефона','Пробую еду из автомата','Кот против пылесоса','Неделя без сахара','Сплю 12 часов','Готовлю из того, что есть','Реакция бабушки на мемы','Танцы в метро','Уборка за 5 минут','Покупки на 1000 рублей','Первый раз в спортзале','Пранк с будильником'];
 const HIDE_ALPHA=['В шкафу','Под кроватью','За шторой','В ванной','Под столом','За диваном','В коробке','Под одеялом','На балконе','За дверью','В корзине для белья','За холодильником','Под лестницей','В шалаше из подушек','За ёлкой'];
 const FETCH=['В кусты','В лужу','Под лавочку','За забор','В песочницу','К голубям','Под машину','В клумбу','На горку','В сугроб листьев','За гараж','В фонтан','К соседу','Под качели','На крышу сарая'];
 const HIDE_CAT=['В коробке','Под диваном','В шкафу','На холодильнике','За шторой','В раковине','В пакете','Под кроватью','На подоконнике','В корзине','В чемодане','За телевизором','На шкафу','В ящике стола','В тапке'];
@@ -756,6 +812,8 @@ function startGame(p){
   if(p.type==='trainer') mg.deck=shuffle(EXERCISES);
   if(p.type==='lifter'){ const P=todayProgram(p), M=LIFT_MAX(p)[P[0]]; mg.lift=LIFTS[P[0]]; mg.prog=mg.lift+' '+P[1]; mg.sets=P[2].map(([reps,pc])=>[reps,r25(M*pc)]);
     mg.deck=mg.sets.map(([reps,w],i)=>'Подход '+(i+1)+': '+mg.lift.toLowerCase()+' '+reps+' × '+kg(w)+' кг'); }
+  if(p.type==='strongman') mg.deck=['Камень 100 кг','Камень 120 кг','Камень 140 кг','Камень 160 кг','Камень 180 кг'];
+  if(p.type==='thai'){ const K=['Джеб','Лоу-кик','Колено','Локоть']; mg.deck=[3,3,4,4,5].map(n=>Array.from({length:n},()=>pick(K))); }
   if(p.type==='hamster') mg.deck=shuffle(['Разгон','Круг почёта','Спринт','Марафон','Рывок','Турбо','Ещё круг','Финишная прямая']);
   if(p.type==='office'){ const imp=shuffle(MAILS.filter(m=>m[1])), sp=shuffle(MAILS.filter(m=>!m[1])); const nImp=2+Math.floor(Math.random()*2); mg.deck=shuffle(imp.slice(0,nImp).concat(sp.slice(0,5-nImp))); }
   if(p.type==='student') mg.deck=shuffle(QUIZ);
@@ -770,13 +828,14 @@ function nextRound(){
   const r=mg.round;
   if(mg.meet&&prevPh!=='play2'){ mg.phase='choose'; mg.opts=meetOptions(); renderMG(); return; }
   if(mg.meet){ mg.phase='play'; const i=Math.floor(r/3); mg.ex=LIFTS[i]+' — '+(r%3+1)+'-я попытка, '+kg(mg.w)+' кг'; mg.period=meetSpeed(mg.w,mg.max[i]); }
-  else if(mg.type==='trainer'||mg.type==='hamster'||mg.type==='lifter') mg.ex=mg.deck[r];
+  else if(mg.type==='trainer'||mg.type==='hamster'||mg.type==='lifter'||mg.type==='strongman') mg.ex=mg.deck[r];
   if(mg.type==='office') mg.mail=mg.deck[r];
+  if(mg.type==='thai'){ mg.seq=mg.deck[r]; mg.inp=[]; mg.hideSeq=false; }
   if(mg.type==='student'){ const q=mg.deck[r]; mg.q=q[0]; mg.opts=shuffle([q[1],q[2]]); mg.ans=mg.opts.indexOf(q[1]); }
   if(mg.type==='zoomer'){ mg.opts=mg.deck.slice(r*2,r*2+2); mg.ans=Math.random()<.5?0:1; }
   if(mg.type==='alpha'||mg.type==='cat'||mg.type==='dog'){ mg.opts=mg.deck.slice(r*3,r*3+3); mg.ans=Math.floor(Math.random()*3); }
   renderMG();
-  if(mg.type==='trainer'||mg.type==='hamster'||mg.type==='lifter'){ mg.t0=performance.now(); const loop=()=>{ if(!mg||mg.phase!=='play') return; const el=document.querySelector('.meter .mark'); const ph=((performance.now()-mg.t0)/(mg.meet?mg.period:mg.type==='lifter'?1700:1500))%2; mg.pos=(ph<1?ph:2-ph)*100; if(el) el.style.left='calc('+mg.pos+'% - 3px)'; mgRaf=requestAnimationFrame(loop); }; mgRaf=requestAnimationFrame(loop); }
+  if(mg.type==='trainer'||mg.type==='hamster'||mg.type==='lifter'||mg.type==='strongman'){ mg.t0=performance.now(); const loop=()=>{ if(!mg||mg.phase!=='play') return; const el=document.querySelector('.meter .mark'); const ph=((performance.now()-mg.t0)/(mg.meet?mg.period:mg.type==='lifter'?1700:mg.type==='strongman'?1600-mg.round*170:1500))%2; mg.pos=(ph<1?ph:2-ph)*100; if(el) el.style.left='calc('+mg.pos+'% - 3px)'; mgRaf=requestAnimationFrame(loop); }; mgRaf=requestAnimationFrame(loop); }
 }
 function endRound(hit,note){
   stopTimers(); if(!mg||mg.phase!=='play') return;
@@ -803,8 +862,69 @@ function finishMeet(p){
     p.msg='Сумма '+kg(tot)+' кг ('+mg.best.map(kg).join(' / ')+'). '+['','Золото! 🥇','Серебро 🥈','Бронза 🥉'][pl]+' Медаль №'+p.medals+'.'; }
   p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; mg=null; save(); render();
 }
+const CATCH={strongman:{good:'🥩',bad:'🥗',gn:'мясо',bn:'салат'},thai:{good:'🥭',bad:'🍔',gn:'манго',bn:'бургеры'},cat:{good:'🐟',bad:'🥒',gn:'рыбку',bn:'огурцы'},dog:{good:'🦴',bad:'🧅',gn:'косточки',bn:'лук'},hamster:{good:'🌻',bad:'🌶️',gn:'семечки',bn:'перец'},
+  lifter:{good:'🎂',bad:'🥛',gn:'торт',bn:'протеин'},trainer:{good:'🥛',bad:'🎂',gn:'протеин',bn:'торт'},office:{good:'📄',bad:'🗑️',gn:'документы',bn:'спам'},
+  student:{good:'📝',bad:'⏰',gn:'шпаргалки',bn:'будильники'},zoomer:{good:'❤️',bad:'👎',gn:'лайки',bn:'дизлайки'},alpha:{good:'🍬',bad:'🥦',gn:'конфеты',bn:'брокколи'}};
+const PAIRS={strongman:['🪨','🥩','🛞','🏆'],thai:['🥊','🥭','🏆','🦵'],cat:['🐟','🧶','🐭','🥛'],dog:['🦴','🎾','🐾','🥩'],hamster:['🌻','🥕','🧀','🌰'],lifter:['🏋️','🥟','🥇','🎂'],trainer:['💪','🥛','⏱️','👟'],office:['💼','☕','📎','📊'],
+  student:['📚','🎓','✏️','🍜'],zoomer:['📱','🎧','🛹','✨'],alpha:['🧸','🍭','🚀','🎈']};
+let catchTimer=null;
+function startMini(p,mode){
+  mg={type:p.type,mode,round:0,score:0,phase:'intro',quit:false};
+  if(mode==='pairs'){ mg.cards=shuffle(PAIRS[p.type].concat(PAIRS[p.type])).map(e=>({e,up:false,ok:false})); mg.moves=0; mg.open=[]; }
+  if(mode==='ttt'){ mg.b=Array(9).fill(''); }
+  renderMG();
+}
+function miniEnd(win,text){ clearInterval(catchTimer); catchTimer=null; const p=S.pet; if(!p){mg=null;render();return;} const c=CH[p.type];
+  if(win){ p.stats.happy=clamp(p.stats.happy+25); p.extra=Math.max(-2*c.fatDiv,p.extra-c.w.game); } else p.stats.happy=clamp(p.stats.happy+15);
+  p.msg=text; p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; if(p.stats.happy>40) resolveEv(p,'bored'); sfx(win?'evo':'happy'); mg=null; save(); render(); }
+const LINES=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+const tttWin=(b,x)=>LINES.some(l=>l.every(i=>b[i]===x));
+function tttAI(b){ const free=b.map((v,i)=>v?null:i).filter(i=>i!==null);
+  for(const who of ['O','X']) for(const i of free){ const c=b.slice(); c[i]=who; if(tttWin(c,who)) return i; }
+  if(!b[4]&&Math.random()<.6) return 4; return pick(free); }
+function renderMini(v){
+  const p=S.pet, C=CATCH[p.type];
+  const head=`<h3><span>${mg.mode==='catch'?'Поймай':mg.mode==='pairs'?'Найди пару':'Крестики-нолики'}</span><span>${mg.mode==='catch'&&mg.phase==='play'?'очки '+mg.score+' · '+Math.max(0,Math.ceil((mg.end-performance.now())/1000))+' с':mg.mode==='pairs'?'ходов '+(mg.moves||0):''}</span></h3>`;
+  let body='';
+  if(mg.phase==='intro'){
+    const t=mg.mode==='catch'?'Сверху падают '+C.gn+' '+C.good+' и '+C.bn+' '+C.bad+'. Лови только '+C.gn+' — нажимай на них. За '+C.bn+' минус очко. 20 секунд, нужно набрать 8.'
+      :mg.mode==='pairs'?'Под карточками спрятаны 4 пары картинок. Открывай по две и запоминай. Найди все пары за 9 ходов.'
+      :'Ты — крестики, '+(isF(p)?'она':'он')+' — нолики. Собери три в ряд. Ходишь первым.';
+    body=`<div class="q">${t}</div><div class="lcdbtns"><button id="mgGo">Начать</button></div>`;
+  } else if(mg.mode==='catch') body=`<div class="cfield" id="cfield"></div>`;
+  else if(mg.mode==='pairs') body=`<div class="pairs">${mg.cards.map((c,i)=>`<button type="button" data-c="${i}" class="${c.ok?'ok up':c.up?'up':''}">${c.up||c.ok?c.e:''}</button>`).join('')}</div>`;
+  else body=`<div class="q">${mg.msg||'Твой ход.'}</div><div class="ttt">${mg.b.map((x,i)=>`<button type="button" data-t="${i}" ${x||mg.over?'disabled':''}>${x==='X'?'✕':x==='O'?'○':''}</button>`).join('')}</div>`;
+  v.innerHTML=head+body+`<button class="mgquit" id="mgQuit">${mg.quit?'Точно выйти? Нажми ещё раз':'Выйти из игры'}</button>`; v.hidden=false;
+  const G=document.getElementById('mgGo');
+  if(G) G.onclick=()=>{ mg.phase='play'; if(mg.mode==='catch') runCatch(); else renderMG(); };
+  if(mg.mode==='pairs'&&mg.phase==='play') v.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.c, c=mg.cards[i]; if(c.up||c.ok||mg.open.length>=2) return;
+    c.up=true; mg.open.push(i); sfx('click');
+    if(mg.open.length===2){ mg.moves++; const [a,b2]=mg.open.map(k=>mg.cards[k]);
+      if(a.e===b2.e){ a.ok=b2.ok=true; mg.open=[]; sfx('hit'); if(mg.cards.every(x=>x.ok)){ const w=mg.moves<=9; setTimeout(()=>miniEnd(w,w?'Все пары за '+mg.moves+' ходов! Отличная память.':'Все пары нашлись, но за '+mg.moves+' ходов. Было весело.'),500); } }
+      else setTimeout(()=>{ if(!mg) return; mg.cards[mg.open[0]].up=false; mg.cards[mg.open[1]].up=false; mg.open=[]; renderMG(); },700); }
+    renderMG(); });
+  if(mg.mode==='ttt'&&mg.phase==='play') v.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.t; if(mg.b[i]||mg.over) return; mg.b[i]='X'; sfx('click');
+    const done=w=>{ mg.over=true; renderMG(); setTimeout(()=>miniEnd(w==='X',w==='X'?'Ты выиграл в крестики-нолики! '+(isF(p)?'Она':'Он')+' требует реванш.':w==='O'?(isF(p)?'Она':'Он')+' выиграл'+(isF(p)?'а':'')+' и очень довол'+(isF(p)?'ьна':'ен')+' собой.':'Ничья. Сыграли на равных.'),900); };
+    if(tttWin(mg.b,'X')){ mg.msg='Три в ряд! Победа!'; return done('X'); }
+    if(mg.b.every(x=>x)){ mg.msg='Ничья.'; return done('='); }
+    const j=tttAI(mg.b); mg.b[j]='O';
+    if(tttWin(mg.b,'O')){ mg.msg=(isF(p)?'Она':'Он')+' собрал'+(isF(p)?'а':'')+' три в ряд!'; return done('O'); }
+    if(mg.b.every(x=>x)){ mg.msg='Ничья.'; return done('='); }
+    mg.msg='Твой ход.'; renderMG(); });
+  document.getElementById('mgQuit').onclick=()=>{ if(!mg.quit){mg.quit=true;renderMG();return;} clearInterval(catchTimer); catchTimer=null; stopTimers(); mg=null; render(); };
+}
+function runCatch(){
+  renderMG(); const C=CATCH[S.pet.type], F=document.getElementById('cfield'); mg.end=performance.now()+20000; let last=0;
+  const spawn=()=>{ const good=Math.random()<.65, el=document.createElement('div'); el.className='it'; el.textContent=good?C.good:C.bad; el.style.left=Math.round(rnd(4,82))+'%';
+    const dur=rnd(2000,2900); el.animate([{transform:'translateY(0)'},{transform:'translateY(290px)'}],{duration:dur,easing:'linear'}).onfinish=()=>el.remove();
+    el.addEventListener('pointerdown',e=>{ e.preventDefault(); if(!mg) return; if(good){ mg.score++; sfx('hit'); } else { mg.score--; sfx('miss'); } el.remove(); upd(); }); F.appendChild(el); };
+  const upd=()=>{ const h=document.querySelector('#mgView h3 span:last-child'); if(h&&mg) h.textContent='очки '+mg.score+' · '+Math.max(0,Math.ceil((mg.end-performance.now())/1000))+' с'; };
+  clearInterval(catchTimer); catchTimer=setInterval(()=>{ if(!mg||mg.mode!=='catch'){ clearInterval(catchTimer); return; } const now=performance.now(); if(now-last>650){ last=now; spawn(); } upd();
+    if(now>=mg.end){ clearInterval(catchTimer); catchTimer=null; const w=mg.score>=8; miniEnd(w,w?'Поймано '+mg.score+'! '+C.good+' Ловкость на высоте.':'Набрано '+mg.score+' из 8. Почти! Было весело.'); } },100);
+}
 function renderMG(){
   const v=document.getElementById('mgView'); if(!mg){v.hidden=true;return;}
+  if(mg.mode) return renderMini(v);
   const c=CH[mg.type]; let body='';
   const unit=mg.meet?'Попытка ':mg.type==='lifter'?'Подход ':'Раунд ';
   const head=`<h3><span>${mg.meet?'Соревнования':mg.type==='lifter'?mg.prog:c.game}</span><span>${mg.phase==='intro'?(mgTotal()+(mg.meet?' попыток':mg.type==='lifter'?(mgTotal()<5?' подхода':' подходов'):' раундов')):unit+Math.min(mg.round+(mg.phase==='play'||mg.phase==='choose'?1:0),mgTotal())+'/'+mgTotal()+' · '+(mg.type==='lifter'?'засчитано ':'очки ')+mg.score}</span></h3>`;
@@ -819,8 +939,11 @@ function renderMG(){
   } else if(mg.phase==='result'){
     const last=mg.round>=mgTotal();
     body=`<div class="q"><b>${mg.type==='lifter'?mg.ex:(mg.hit?'Есть! +1':'Мимо.')}</b>${mg.note?'<br>'+mg.note:''}</div><div class="lcdbtns"><button id="mgGo">${last?'Итог':mg.meet?'Следующая попытка':mg.type==='lifter'?'Следующий подход':'Следующий раунд'}</button></div>`;
-  } else if(mg.type==='trainer'||mg.type==='hamster'||mg.type==='lifter'){
-    body=`<div class="q"><b>${mg.ex}</b><br>${mg.type==='lifter'?'Жми «Подъём!», когда метка в зоне.':'Жми, когда метка в зоне.'}</div><div class="meter"><div class="zone" style="${mg.type==='lifter'?'left:35%;width:30%':''}"></div><div class="mark"></div></div><div class="lcdbtns"><button id="mgA">${mg.type==='hamster'?'Крути!':mg.type==='lifter'?'Подъём!':'Жми!'}</button></div>`;
+  } else if(mg.type==='trainer'||mg.type==='hamster'||mg.type==='lifter'||mg.type==='strongman'){
+    body=`<div class="q"><b>${mg.ex}</b><br>${mg.type==='lifter'?'Жми «Подъём!», когда метка в зоне.':'Жми, когда метка в зоне.'}</div><div class="meter"><div class="zone" style="${mg.type==='lifter'?'left:35%;width:30%':''}"></div><div class="mark"></div></div><div class="lcdbtns"><button id="mgA">${mg.type==='hamster'?'Крути!':mg.type==='lifter'?'Подъём!':mg.type==='strongman'?'Поднять!':'Жми!'}</button></div>`;
+  } else if(mg.type==='thai'){
+    body=!mg.hideSeq?`<div class="q">Запомни комбинацию:<br><b>${mg.seq.join(' → ')}</b></div><div class="lcdbtns"><button id="mgA">Запомнил!</button></div>`
+      :`<div class="q">Повтори: ${mg.inp.length?mg.inp.join(' → '):'…'} (${mg.inp.length}/${mg.seq.length})</div><div class="lcdbtns">${['Джеб','Лоу-кик','Колено','Локоть'].map(k=>`<button data-k="${k}" class="hide">${k}</button>`).join('')}</div>`;
   } else if(mg.type==='office'){
     body=`<div class="q">${mg.mail[0]}</div><div class="lcdbtns"><button id="mgA">Важное</button><button id="mgB">В спам</button></div>`;
   } else if(mg.type==='student'){
@@ -839,13 +962,17 @@ function renderMG(){
   if(G) G.onclick=()=>{ if(mg.phase==='result'&&mg.round>=mgTotal()) finishGame(); else nextRound(); };
   if(mg.phase==='choose') v.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{ mg.w=+b.dataset.w; mg.phase='play2'; sfx('click'); nextRound(); });
   if(mg.phase==='play'){
-    if(mg.type==='trainer'||mg.type==='hamster'||mg.type==='lifter') A.onclick=()=>{ const H=mg.type==='hamster', L=mg.type==='lifter';
+    if(mg.type==='trainer'||mg.type==='hamster'||mg.type==='lifter'||mg.type==='strongman') A.onclick=()=>{ const H=mg.type==='hamster', L=mg.type==='lifter';
       if(L){ const d=Math.abs(mg.pos-50), ok=d<=15, lift=mg.ex.split(' — ')[0];
         const R=(mg.meet?{'Присед':['недосед, не хватило глубины','не дождался команды «Присед»','двойное вставание'],'Жим лёжа':['оторвал таз от скамьи','не дождался команды «Жим»','штанга пошла вниз при выжимании'],'Становая тяга':['не дожал колени','опустил до команды «Вниз»','подсед под штангу']}:{'Присед':['завалился вперёд на последнем повторе','не хватило глубины','колени поехали внутрь'],'Жим лёжа':['штанга встала на последнем повторе','оторвал таз','потерял прогиб'],'Становая тяга':['округлил спину','штанга ушла от ног','не дотянул последний повтор']})[mg.meet?lift:mg.lift]||['не засчитано'];
         const why=R[Math.floor(Math.random()*R.length)];
         if(!mg.meet){ endRound(ok, ok?(d<=6?'Чисто, все повторы как по учебнику!':'Тяжело, но подход сделан.'):'Подход сорван: '+why+'.'); return; }
         endRound(ok, d<=6?'⚪⚪⚪ Три белые. Вес засчитан!':ok?'⚪⚪🔴 Две белые. Вес засчитан!':d<=24?'🔴🔴⚪ Не засчитано: '+why+'.':'🔴🔴🔴 Не засчитано: '+why+'.'); return; }
-      const ok=mg.pos>=38&&mg.pos<=62; endRound(ok, ok?mg.ex+(H?': колесо раскрутилось!':': чистое повторение.'):mg.ex+(H?': соскочил с колеса.':': сбился с темпа.'));};
+      const ok=mg.pos>=38&&mg.pos<=62, SM=mg.type==='strongman'; endRound(ok, ok?mg.ex+(H?': колесо раскрутилось!':SM?' на помосте! Зал ревёт.':': чистое повторение.'):mg.ex+(H?': соскочил с колеса.':SM?' выскользнул из рук.':': сбился с темпа.'));};
+    if(mg.type==='thai'){ if(!mg.hideSeq) A.onclick=()=>{ mg.hideSeq=true; sfx('click'); renderMG(); };
+      else v.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{ mg.inp.push(b.dataset.k); sfx('click'); const i=mg.inp.length-1;
+        if(mg.inp[i]!==mg.seq[i]) return endRound(false,'Сбился! Было: '+mg.seq.join(' → ')+'.');
+        if(mg.inp.length===mg.seq.length) return endRound(true,'Чистая комбинация! Тренер кивает.'); renderMG(); }); }
     if(mg.type==='office'){A.onclick=()=>endRound(mg.mail[1]===1, mg.mail[1]?'Правильно, это важное.':'Это был спам.');B.onclick=()=>endRound(mg.mail[1]===0, mg.mail[1]?'Это было важное письмо!':'Правильно, в спам.');}
     if(mg.type==='student'){const r=i=>endRound(mg.ans===i,'Правильный ответ: '+mg.opts[mg.ans]+'.');A.onclick=()=>r(0);B.onclick=()=>r(1);}
     if(mg.type==='zoomer'){const r=i=>endRound(mg.ans===i,'Залетело видео «'+mg.opts[mg.ans]+'».');A.onclick=()=>r(0);B.onclick=()=>r(1);}
@@ -888,10 +1015,10 @@ function human(type,stage,form,mood,fat,sex,look){
   const OUTF=W('top')?OUTFITS[look.top]:null, HAIR=look.hair&&look.hair!=='default'?look.hair:null;
   const baby=stage==='baby', adult=stage==='adult', good=adult&&form==='good', bad=adult&&form==='bad', kid=baby||type==='alpha';
   const hr=kid?34:33, hy=kid?-82:-100;
-  const bw=(kid?38:46)+(type==='lifter'&&!kid?10:0)+fat*(kid?6:9), bh=(kid?34:50)+fat*2, by=kid?-50:-70, bb=by+bh;
+  const bw=(kid?38:46)+(type==='lifter'&&!kid?10:0)+(type==='strongman'&&!kid?18:0)+(type==='thai'&&!kid?2:0)+fat*(kid?6:9), bh=(kid?34:50)+fat*2, by=kid?-50:-70, bb=by+bh;
   const legX=7+fat*1.6, legH=Math.max(8,-2-(bb-8));
   const skin=mood==='sick'?SICKSKIN:SKIN;
-  let pal={lifter:{top:'#2f5fb0',pants:'#2f5fb0',hair:'#3a2c22'},trainer:{top:bad?'#9aa0a6':'#e8584f',pants:'#3b4a6b',hair:'#6b4a2f'},
+  let pal={strongman:{top:'#2a2a2e',pants:'#2a2a2e',hair:'#7a4a24'},thai:{top:skin,pants:'#d6304a',hair:'#2a2a2a'},lifter:{top:'#2f5fb0',pants:'#2f5fb0',hair:'#3a2c22'},trainer:{top:bad?'#9aa0a6':'#e8584f',pants:'#3b4a6b',hair:'#6b4a2f'},
              office:{top:good?'#2f3e66':'#f4f6fb',pants:'#4a4f5c',hair:'#3a2c22'},
              student:{top:'#4caf7d',pants:'#4c6fae',hair:'#c98b4a'},
              zoomer:{top:'#c8b6f0',pants:'#6b7a8f',hair:baby?'#5a3f2c':'#9b7bd6'},
@@ -899,10 +1026,10 @@ function human(type,stage,form,mood,fat,sex,look){
   if(OUTF) pal=Object.assign({},pal,{top:OUTF.top,pants:OUTF.pants||pal.pants});
   const PJ=k=>type==='lifter'&&W('pjt_'+k);
   if(PJ('suit')&&!OUTF) pal=Object.assign({},pal,{top:PJT_COL[look.pjt_suit],pants:PJT_COL[look.pjt_suit]});
-  const bare=(type==='trainer'||type==='alpha'||type==='lifter')&&!OUTF;
+  const bare=(type==='trainer'||type==='alpha'||type==='lifter'||type==='strongman'||type==='thai')&&!OUTF;
   const sl=bare?skin:pal.top;
   const armUp=mood==='happy', ax=bw/2+5, ay=by+22, sy=by+6;
-  const arm=(sx)=>`<g transform="rotate(${armUp?sx*-125:sx*-8} ${sx*(bw/2-2)} ${sy})"><ellipse cx="${sx*ax}" cy="${ay}" rx="7" ry="17" fill="${sl}"/>${!bare?`<circle cx="${sx*ax}" cy="${ay+16}" r="6" fill="${skin}"/>`:''}${PJ('elbow')?`<rect x="${sx*ax-7.5}" y="${ay-5}" width="15" height="8" rx="2" fill="#1e1e24"/>`:''}${PJ('wrist')?`<rect x="${sx*ax-7}" y="${ay+8}" width="14" height="6" rx="2" fill="#c43c35"/><path d="M${sx*ax-5} ${ay+11} h10" stroke="#fff" stroke-width="1.2"/>`:''}</g>`;
+  const arm=(sx)=>`<g transform="rotate(${armUp?sx*-125:sx*-8} ${sx*(bw/2-2)} ${sy})"><ellipse cx="${sx*ax}" cy="${ay}" rx="7" ry="17" fill="${sl}"/>${!bare?`<circle cx="${sx*ax}" cy="${ay+16}" r="6" fill="${skin}"/>`:''}${type==='thai'&&!OUTF?`<rect x="${sx*ax-7.5}" y="${ay-12}" width="15" height="5" rx="2" fill="#d6304a"/><rect x="${sx*ax-7}" y="${ay+10}" width="14" height="7" rx="2" fill="#f7f7f2"/>`:''}${PJ('elbow')?`<rect x="${sx*ax-7.5}" y="${ay-5}" width="15" height="8" rx="2" fill="#1e1e24"/>`:''}${PJ('wrist')?`<rect x="${sx*ax-7}" y="${ay+8}" width="14" height="6" rx="2" fill="#c43c35"/><path d="M${sx*ax-5} ${ay+11} h10" stroke="#fff" stroke-width="1.2"/>`:''}</g>`;
   let g=`<g stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round">`;
   // ноги
   g+=`<rect x="${-legX-5}" y="${bb-8}" width="10" height="${legH}" rx="4" fill="${pal.pants}"/><rect x="${legX-5}" y="${bb-8}" width="10" height="${legH}" rx="4" fill="${pal.pants}"/>`;
@@ -944,6 +1071,11 @@ function human(type,stage,form,mood,fat,sex,look){
     [-1,1].forEach(sx=>g+=`<rect x="${sx*legX-6}" y="${bb+2}" width="12" height="${Math.max(6,legH*.4)}" rx="3" fill="#1e1e24" stroke="none"/>`);
     if(good) g+=`<path d="M-9 ${by+2} L0 ${by+18} L9 ${by+2}" fill="none" stroke="#d6304a" stroke-width="3"/><circle cx="0" cy="${by+22}" r="7" fill="#f2c14e" stroke="${OUT}" stroke-width="2"/><text x="0" y="${by+25}" text-anchor="middle" font-family="Arial" font-weight="900" font-size="8" fill="${OUT}">1</text>`;
   }
+  if(type==='strongman'){ g+=`<path d="M-11 ${by} q11 13 22 0" fill="${skin}" stroke="${OUT}" stroke-width="2"/><path d="M${-bw/2+5} ${by+4} l8 -7 M${bw/2-5} ${by+4} l-8 -7" stroke="${OUT}" stroke-width="2.5" stroke-linecap="round"/><path d="M${-bw/2+3} ${by+bh*.28} h${bw-6}" stroke="#f2c14e" stroke-width="4"/>`;
+    if(!baby){ const beltY=by+bh*.6; g+=`<rect x="${-bw/2+1}" y="${beltY}" width="${bw-2}" height="13" fill="#c43c35" stroke="${OUT}" stroke-width="2.5"/><rect x="-8" y="${beltY+2}" width="16" height="9" rx="2" fill="#c9cfd6" stroke="${OUT}" stroke-width="2"/>`; }
+    if(good) g+=`<path d="M-9 ${by+2} L0 ${by+18} L9 ${by+2}" fill="none" stroke="#d6304a" stroke-width="3"/><circle cx="0" cy="${by+22}" r="7" fill="#f2c14e" stroke="${OUT}" stroke-width="2"/>`; }
+  if(type==='thai'){ g+=`<path d="M-6 ${by+bh*.35} q6 4 12 0" fill="none" stroke="${OUT}" stroke-width="1.5"/><rect x="${-bw/2+1}" y="${bb-14}" width="${bw-2}" height="16" rx="3" fill="#d6304a" stroke="${OUT}" stroke-width="2.5"/><rect x="${-bw/2+1}" y="${bb-14}" width="${bw-2}" height="4" fill="#fff" stroke="none"/>`;
+    if(good) g+=`<rect x="${-bw/2}" y="${bb-24}" width="${bw}" height="10" rx="3" fill="#f2c14e" stroke="${OUT}" stroke-width="2"/><circle cx="0" cy="${bb-19}" r="6" fill="#f7d774" stroke="${OUT}" stroke-width="2"/>`; }
   if(type==='trainer'){ g+=`<ellipse cx="0" cy="${by+1}" rx="9" ry="6" fill="${skin}" stroke="${OUT}" stroke-width="2"/>`;
     if(good) g+=`<path d="M-9 ${by+2} L0 ${by+18} L9 ${by+2}" fill="none" stroke="#3b6fd4" stroke-width="3"/><circle cx="0" cy="${by+22}" r="7" fill="#f2c14e" stroke="${OUT}" stroke-width="2"/>`; }
   if(type==='office'){
@@ -960,7 +1092,7 @@ function human(type,stage,form,mood,fat,sex,look){
   if(F&&type==='office'&&!OUTF){ g+=`<path d="M${-bw/2+1} ${bb-12} h${bw-2} l6 16 h${-bw-10} z" fill="#4a4f5c" stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"/>`; }
   if(HAIR==='long') g+=`<path d="M${-hr+2} ${hy-6} Q${-hr-4} ${hy+38} ${-hr+10} ${hy+44} L${hr-10} ${hy+44} Q${hr+4} ${hy+38} ${hr-2} ${hy-6} Z" fill="${pal.hair}" stroke="${OUT}" stroke-width="2.5"/>`;
   if(F&&!HAIR){ const hc=pal.hair;
-    if(type==='trainer'||type==='student'||type==='lifter') g+=`<path d="M${hr-6} ${hy-14} q22 6 14 40 q-6 -14 -18 -22 z" fill="${hc}" stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"/>`;
+    if(type==='trainer'||type==='student'||type==='lifter'||type==='strongman'||type==='thai') g+=`<path d="M${hr-6} ${hy-14} q22 6 14 40 q-6 -14 -18 -22 z" fill="${hc}" stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"/>`;
     if(type==='zoomer'||(type==='alpha'&&baby)) g+=`<path d="M${-hr+2} ${hy-6} Q${-hr-4} ${hy+38} ${-hr+10} ${hy+44} L${hr-10} ${hy+44} Q${hr+4} ${hy+38} ${hr-2} ${hy-6} Z" fill="${hc}" stroke="${OUT}" stroke-width="2.5"/>`;
     if(type==='alpha'&&!baby) g+=`<ellipse cx="${-hr-4}" cy="${hy+2}" rx="8" ry="12" fill="${hc}" stroke="${OUT}" stroke-width="2.5"/><ellipse cx="${hr+4}" cy="${hy+2}" rx="8" ry="12" fill="${hc}" stroke="${OUT}" stroke-width="2.5"/>`;
     if(type==='office') g+=`<circle cx="0" cy="${hy-hr-4}" r="10" fill="${hc}" stroke="${OUT}" stroke-width="2.5"/>`;
@@ -975,6 +1107,7 @@ function human(type,stage,form,mood,fat,sex,look){
   if(type==='zoomer'&&!baby&&!HAIR) g+=`<path d="M${-hr+2} ${hy-2} q-2 18 4 26 M${hr-2} ${hy-2} q2 18 -4 26" fill="none" stroke="${pal.hair}" stroke-width="6" stroke-linecap="round"/><path d="M${-hr+4} ${hy-8} Q-6 ${hy-12} 4 ${hy-4} Q14 ${hy-12} ${hr-4} ${hy-8}" fill="${pal.hair}" stroke="${OUT}" stroke-width="2"/>`;
   if(type==='zoomer'&&good) g+=`<path d="M${-hr-4} ${hy+2} Q${-hr-4} ${hy-hr-10} 0 ${hy-hr-10} Q${hr+4} ${hy-hr-10} ${hr+4} ${hy+2}" fill="none" stroke="${OUT}" stroke-width="4"/><rect x="${-hr-9}" y="${hy-6}" width="10" height="16" rx="4" fill="#ff7aa8" stroke="${OUT}" stroke-width="2"/><rect x="${hr-1}" y="${hy-6}" width="10" height="16" rx="4" fill="#ff7aa8" stroke="${OUT}" stroke-width="2"/>`;
   if(type==='alpha') g+=`<path d="M2 ${hy-hr} q4 -12 12 -10" fill="none" stroke="${OUT}" stroke-width="2.5"/><path d="M2 ${hy-hr} q4 -12 12 -10" fill="none" stroke="${pal.hair}" stroke-width="1"/>`;
+  if(type==='thai'&&!W('hat')) g+=`<path d="M${-hr} ${hy-12} Q0 ${hy-22} ${hr} ${hy-12}" fill="none" stroke="#d6304a" stroke-width="6"/><path d="M${-hr} ${hy-12} Q0 ${hy-22} ${hr} ${hy-12}" fill="none" stroke="#fff" stroke-width="1.5" stroke-dasharray="4 4"/>`;
   if(type==='trainer'&&!bad&&!W('hat')) g+=`<rect x="${-hr-1}" y="${hy-14}" width="${2*hr+2}" height="8" rx="3" fill="#e8584f" stroke="${OUT}" stroke-width="2.5"/>`;
   if(type==='student'&&good&&!W('hat')) g+=`<g stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"><rect x="-20" y="${hy-hr+2}" width="40" height="10" fill="#2a2a2a"/><polygon points="-40,${hy-hr-2} 0,${hy-hr-14} 40,${hy-hr-2} 0,${hy-hr+8}" fill="#2a2a2a"/></g><path d="M30 ${hy-hr-4} v18" stroke="#f2c14e" stroke-width="3"/>`;
   if(stage==='teen'&&form==='bad'&&!HAIR) g+=`<path d="M-8 ${hy-hr+1} l-4 -12 l9 7 l3 -12 l4 12 l8 -9 l-2 13" fill="${pal.hair}" stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"/><path d="M-18 ${hy-6} l10 4 M18 ${hy-6} l-10 4" stroke="${OUT}" stroke-width="2.5" stroke-linecap="round"/>`;
@@ -983,6 +1116,7 @@ function human(type,stage,form,mood,fat,sex,look){
   if(type==='alpha'&&good) g+=`<g fill="none" stroke="${OUT}" stroke-width="2"><circle cx="-11" cy="${hy+3}" r="8"/><circle cx="11" cy="${hy+3}" r="8"/><path d="M-3 ${hy+3} h6"/></g>`;
   if(type==='office'&&!baby) g+=`<g fill="none" stroke="${OUT}" stroke-width="2"><circle cx="-11" cy="${hy+3}" r="8"/><circle cx="11" cy="${hy+3}" r="8"/><path d="M-3 ${hy+3} h6"/></g>`;
   if(type==='lifter'&&!baby&&mood!=='happy') [-1,1].forEach(sx=>g+=`<circle cx="${sx*(bw/2+6)}" cy="${by+38}" r="5" fill="#fff" opacity=".85"/>`);
+  if(W('beard')&&!F&&!kid) g+=beardSVG(look.beard,hr,hy,pal.hair);
   if(W('glasses')) g+=glassesSVG(look.glasses,hy+3);
   if(W('hat')) g+=hatSVG(look.hat,hr,hy);
   if(type==='student'&&bad&&!F) g+=`<g fill="${OUT}"><circle cx="-6" cy="${hy+24}" r="1.2"/><circle cx="0" cy="${hy+26}" r="1.2"/><circle cx="6" cy="${hy+24}" r="1.2"/><circle cx="-10" cy="${hy+21}" r="1.2"/><circle cx="10" cy="${hy+21}" r="1.2"/></g><path d="M-16 ${hy+9} q5 3 10 0 M6 ${hy+9} q5 3 10 0" fill="none" stroke="#8a6a9a" stroke-width="2"/>`;
@@ -1060,6 +1194,7 @@ const WEAR={
   coat:{sweater:'Свитер',raincoat:'Дождевик',hoodie:'Худи',leather:'Кожанка',tshirt:'Футболка'},
   pshoes:{red:'Красные ботиночки',yellow:'Жёлтые резиновые',black:'Чёрные ботинки',white:'Белые кроссовки'}
 };
+WEAR.beard={stubble:'Щетина',short:'Короткая борода',long:'Длинная борода',goatee:'Эспаньолка',mustache:'Усы',full:'Борода с усами'};
 Object.assign(WEAR.hat,{beret:'Берет',bucket:'Панама-ведро',chef:'Поварской колпак',pirate:'Пиратская шляпа',viking:'Шлем викинга',headband:'Повязка на лоб',flowers:'Венок',earmuffs:'Наушники-меховушки',capblue:'Синяя кепка',beaniepink:'Розовая шапка'});
 Object.assign(WEAR.glasses,{aviator:'Авиаторы',star:'Очки-звёзды',pixel:'Пиксельные',monocle:'Монокль',ski:'Горнолыжная маска',cateye:'Кошачий глаз',redround:'Красные круглые',bluesun:'Синие солнечные',threed:'3D-очки',visor:'Визор'});
 Object.assign(WEAR.neck,{tie:'Галстук',tieblue:'Синий галстук',medal:'Медаль',whistle:'Свисток',headphones:'Наушники на шее',scarfblue:'Синий шарф',hearts:'Бусы-сердечки',silver:'Серебряная цепь',bell:'Колокольчик',lei:'Гавайские цветы'});
@@ -1163,6 +1298,16 @@ function hatSVG(id,hr,hy){
   if(id==='pumpkin') return dome('#f08a24',10)+`<path d="M-11 ${hy-7} Q-9 ${t-4} 0 ${t-9} M11 ${hy-7} Q9 ${t-4} 0 ${t-9}" fill="none" stroke="#c4651a" stroke-width="2"/><path d="M0 ${t-9} q1 -9 8 -12" fill="none" stroke="#3f7a2a" stroke-width="4" stroke-linecap="round"/>`;
   return '';
 }
+function beardSVG(id,hr,hy,hc){ const st=`stroke="${OUT}" stroke-width="2" stroke-linejoin="round"`, c=hc||'#3a2c22';
+  const must=`<path d="M-11 ${hy+13} q5 -5 11 -1 q6 -4 11 1 q-5 4 -11 1 q-6 3 -11 -1 z" fill="${c}" ${st}/>`;
+  const jaw=(d)=>`<path d="M${-hr+3} ${hy+2} Q${-hr+1} ${hy+hr+d} 0 ${hy+hr+d+2} Q${hr-1} ${hy+hr+d} ${hr-3} ${hy+2} Q${hr-7} ${hy+22} 0 ${hy+23} Q${-hr+7} ${hy+22} ${-hr+3} ${hy+2} Z" fill="${c}" ${st}/>`;
+  if(id==='stubble'){ let s=''; for(let i=0;i<22;i++){ const a=(200+i*7)*Math.PI/180; const r=hr-5-(i%3)*3; s+=`<circle cx="${Math.cos(Math.PI-a)*r}" cy="${hy+8+Math.abs(Math.sin(a))*r*.55+(i%2)*3}" r="1.1" fill="${c}" opacity=".7"/>`; } return s; }
+  if(id==='short') return jaw(2);
+  if(id==='long') return jaw(14);
+  if(id==='full') return jaw(6)+must;
+  if(id==='goatee') return `<path d="M-6 ${hy+23} q6 14 12 0 z" fill="${c}" ${st}/>`+must;
+  if(id==='mustache') return must;
+  return ''; }
 function glassesSVG(id,ey){
   const st=`stroke="${OUT}" stroke-width="2"`;
   if(id==='sun') return `<g ${st}><rect x="-21" y="${ey-5}" width="17" height="11" rx="4" fill="#1e1e24"/><rect x="4" y="${ey-5}" width="17" height="11" rx="4" fill="#1e1e24"/><path d="M-4 ${ey-1} h8" fill="none"/></g><path d="M-17 ${ey-2} l5 0 M8 ${ey-2} l5 0" stroke="#fff" stroke-width="1.5" opacity=".6"/>`;
@@ -1367,31 +1512,40 @@ function messSVG(kind,x){
   if(kind==='toy') return `<g transform="translate(${x} 198)" ${st}><rect x="-14" y="-18" width="18" height="18" rx="2" fill="#5bb6e8"/><text x="-5" y="-4" text-anchor="middle" font-family="Rubik,sans-serif" font-weight="700" font-size="12" fill="#fff" stroke="none">A</text><circle cx="12" cy="-6" r="6" fill="#e8584f"/></g>`;
   return `<g transform="translate(${x} 198) rotate(-12)" ${st}><path d="M-6 -26 h12 v16 h12 v10 h-24 z" fill="#fff"/><path d="M-6 -20 h12 M-6 -15 h12" stroke="#e8584f" stroke-width="3"/></g>`;
 }
-const WALL={lifter:'#e4e7ec',hamster:'#fdf0d8',dog:'#eef3dc',trainer:'#ffe6d2',office:'#e1ebf7',student:'#e3f3e6',cat:'#fbe9f1',zoomer:'#efe6fb',alpha:'#fff4c9'};
-const FLOOR={lifter:'#7d848e',hamster:'#e8cf9a',dog:'#cdd8a8',trainer:'#e9c3a3',office:'#c3cfdd',student:'#bcd9c2',cat:'#e9c6d6',zoomer:'#d6c6ee',alpha:'#f2d98a'};
+const WALL={strongman:'#efe4d6',thai:'#fde8d0',lifter:'#e4e7ec',hamster:'#fdf0d8',dog:'#eef3dc',trainer:'#ffe6d2',office:'#e1ebf7',student:'#e3f3e6',cat:'#fbe9f1',zoomer:'#efe6fb',alpha:'#fff4c9'};
+const FLOOR={strongman:'#8a7a6a',thai:'#c9a06a',lifter:'#7d848e',hamster:'#e8cf9a',dog:'#cdd8a8',trainer:'#e9c3a3',office:'#c3cfdd',student:'#bcd9c2',cat:'#e9c6d6',zoomer:'#d6c6ee',alpha:'#f2d98a'};
 const WORLD=960, VIEW=320;
 function furnitureSVG(p){
-  const st=`stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"`, wood='#c9915a', wood2='#a8733f';
+  const RR=roomOf(), st=`stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"`, wood=roomCol('furn',RR)||'#c9915a', wood2=roomCol('furn',RR)?shade(roomCol('furn',RR),-20):'#a8733f', cur=roomCol('curtain',RR)||'#e88a7d', cur2=shade(cur,-25), lin=roomCol('linen',RR)||'#9fc3ee', lin2=shade(lin,-18);
+  const now=Date.now(), FO=k=>(furnOpen[k]||0)>now;
   const pk=k=>p.hidden===k?' peek':'';
   let s='';
   // штора
-  s+=`<g class="spot${pk('curtain')}" data-spot="curtain" transform="translate(320 0)"><rect x="88" y="16" width="34" height="4" rx="2" fill="${OUT}"/><path d="M92 20 h28 v174 q-7 4 -14 0 q-7 4 -14 0 z" fill="#e88a7d" ${st}/><path d="M99 24 v168 M106 24 v168 M113 24 v168" stroke="#c96a5e" stroke-width="2"/><rect x="88" y="16" width="36" height="180" fill="transparent"/></g>`;
+  s+=`<g class="spot${pk('curtain')}" data-spot="curtain" transform="translate(320 0)"><rect x="88" y="16" width="34" height="4" rx="2" fill="${OUT}"/>${S.curtOpen?`<path d="M92 20 h10 v174 q-5 3 -10 0 z" fill="${cur}" ${st}/>`:`<path d="M92 20 h28 v174 q-7 4 -14 0 q-7 4 -14 0 z" fill="${cur}" ${st}/><path d="M99 24 v168 M106 24 v168 M113 24 v168" stroke="${cur2}" stroke-width="2"/>`}<rect x="88" y="16" width="36" height="180" fill="transparent"/></g>`;
   // комод
-  s+=`<g class="spot${pk('dresser')}" data-spot="dresser" transform="translate(320 0)"><g ${st}><rect x="268" y="132" width="46" height="62" rx="3" fill="${wood}"/><path d="M268 153 h46 M268 174 h46" fill="none"/></g><circle cx="291" cy="143" r="2.5" fill="${OUT}"/><circle cx="291" cy="164" r="2.5" fill="${OUT}"/><circle cx="291" cy="185" r="2.5" fill="${OUT}"/><g ${st}><path d="M278 132 v-14 h10 v14" fill="#7bd36b"/></g><rect x="266" y="116" width="50" height="80" fill="transparent"/></g>`;
+  s+=`<g class="spot${pk('dresser')}" data-spot="dresser" transform="translate(320 0)"><g ${st}><rect x="268" y="132" width="46" height="62" rx="3" fill="${wood}"/><path d="M268 153 h46 M268 174 h46" fill="none"/></g>${FO('dresser')?`<g ${st}><rect x="262" y="155" width="58" height="17" fill="${wood2}"/><rect x="266" y="152" width="50" height="5" fill="#f7f1e3"/></g><text x="283" y="168" font-size="10">🧦👕</text>`:''}<circle cx="291" cy="143" r="2.5" fill="${OUT}"/><circle cx="291" cy="164" r="2.5" fill="${OUT}"/><circle cx="291" cy="185" r="2.5" fill="${OUT}"/><g ${st}><path d="M278 132 v-14 h10 v14" fill="#7bd36b"/></g><rect x="266" y="116" width="50" height="80" fill="transparent"/></g>`;
   // шкаф
-  s+=`<g class="spot${pk('wardrobe')}" data-spot="wardrobe" transform="translate(-300 0)"><g ${st}><rect x="420" y="70" width="72" height="124" rx="4" fill="${wood}"/><path d="M456 74 v116" fill="none"/></g><circle cx="450" cy="134" r="3" fill="${OUT}"/><circle cx="462" cy="134" r="3" fill="${OUT}"/><rect x="420" y="70" width="72" height="126" fill="transparent"/></g>`;
+  s+=`<g class="spot${pk('wardrobe')}" data-spot="wardrobe" transform="translate(-300 0)"><g ${st}><rect x="420" y="70" width="72" height="124" rx="4" fill="${wood}"/><path d="M456 74 v116" fill="none"/></g>${FO('wardrobe')?wardrobeInside(wood2):`<circle cx="450" cy="134" r="3" fill="${OUT}"/><circle cx="462" cy="134" r="3" fill="${OUT}"/>`}<rect x="420" y="70" width="72" height="126" fill="transparent"/></g>`;
   // стол со скатертью
   s+=`<g class="spot${pk('table')}" data-spot="table" transform="translate(320 0)"><g ${st}><rect x="172" y="146" width="88" height="10" rx="3" fill="${wood2}"/><path d="M176 156 h80 l4 34 h-88 z" fill="#f4f0e6"/></g><path d="M180 172 h72" stroke="#e8584f" stroke-width="3"/><rect x="172" y="140" width="88" height="56" fill="transparent"/>
   <g ${st}><rect x="196" y="130" width="14" height="16" rx="2" fill="#fff"/><circle cx="236" cy="140" r="6" fill="#7bd36b"/></g></g>`;
   // кровать
-  s+=`<g class="spot${pk('bed')}" data-spot="bed" transform="translate(320 0)"><g ${st}><rect x="612" y="118" width="20" height="78" rx="3" fill="${wood}"/><rect x="520" y="160" width="100" height="24" rx="4" fill="${wood}"/><rect x="524" y="148" width="92" height="16" rx="6" fill="#9fc3ee"/><rect x="584" y="140" width="26" height="12" rx="5" fill="#fff"/></g><path d="M524 164 h92 v20 h-92 z" fill="#7fa8dd" stroke="${OUT}" stroke-width="2"/><rect x="516" y="118" width="120" height="78" fill="transparent"/></g>`;
-  s+=`<g stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"><path d="M300 194 v-96" fill="none"/><path d="M286 98 h28 l-6 -24 h-16 z" fill="#ffe08a"/><ellipse cx="300" cy="194" rx="12" ry="3" fill="#777"/></g>`;
+  s+=`<g class="spot${pk('bed')}" data-spot="bed" transform="translate(320 0)"><g ${st}><rect x="612" y="118" width="20" height="78" rx="3" fill="${wood}"/><rect x="520" y="160" width="100" height="24" rx="4" fill="${wood}"/><rect x="524" y="148" width="92" height="16" rx="6" fill="${lin}"/><rect x="584" y="140" width="26" height="12" rx="5" fill="#fff"/></g>${S.bedMessy?`<path d="M524 158 q20 -14 40 -2 q20 10 52 -4 v32 h-92 z" fill="${lin2}" stroke="${OUT}" stroke-width="2"/>`:`<path d="M524 164 h92 v20 h-92 z" fill="${lin2}" stroke="${OUT}" stroke-width="2"/>`}${RR.linen==='stars'?`<text x="540" y="178" font-size="9" fill="#fff6c8">★ ★ ★</text>`:''}<rect x="516" y="118" width="120" height="78" fill="transparent"/></g>`;
+  s+=`<g class="spot" data-spot="lamp"><g stroke="${OUT}" stroke-width="2.5" stroke-linejoin="round"><path d="M300 194 v-96" fill="none"/><path d="M286 98 h28 l-6 -24 h-16 z" fill="${p.light?'#ffe08a':'#b8b2a0'}"/><ellipse cx="300" cy="194" rx="12" ry="3" fill="#777"/></g><rect x="282" y="70" width="36" height="128" fill="transparent"/></g>`;
+  s+=`<g class="spot" data-spot="fridge"><g ${st}><rect x="22" y="62" width="62" height="132" rx="6" fill="#eef2f6"/><path d="M22 108 h62" fill="none"/></g>${FO('fridge')?`<g ${st}><rect x="26" y="112" width="54" height="78" fill="#dff1ff"/><path d="M26 140 h54 M26 166 h54" fill="none"/></g><text x="30" y="136" font-size="13">🥛🧀</text><text x="30" y="162" font-size="13">🍎🥕</text><text x="30" y="186" font-size="13">🍰🥩</text>`:`<rect x="74" y="74" width="4" height="22" rx="2" fill="#9aa0a6"/><rect x="74" y="118" width="4" height="30" rx="2" fill="#9aa0a6"/>`}<rect x="18" y="58" width="70" height="140" fill="transparent"/></g>`;
   return s;
 }
 function sceneSVG(p,m,fat,evo){
   const night=!p.light;
   let s=`<svg viewBox="${camX} 0 ${VIEW} 220" role="img" aria-label="${esc(p.name)}">`;
-  s+=`<rect width="${WORLD}" height="220" fill="${WALL[p.type]}"/><rect y="180" width="${WORLD}" height="40" fill="${FLOOR[p.type]}"/>`;
+  const RR=roomOf();
+  s+=`<rect width="${WORLD}" height="220" fill="${roomCol('wall',RR)||WALL[p.type]}"/><rect y="180" width="${WORLD}" height="40" fill="${roomCol('floor',RR)||FLOOR[p.type]}"/>`;
+  if(RR.floor==='tile') for(let x=0;x<WORLD;x+=40) s+=`<path d="M${x} 180 v40" stroke="#cfc6b2" stroke-width="1.5"/>`;
+  if(RR.rug) s+=`<ellipse cx="480" cy="203" rx="80" ry="12" fill="${roomCol('rug',RR)}" stroke="${OUT}" stroke-width="2"/>`+(RR.rug==='stripes'?`<path d="M420 203 h120 M430 198 h100 M430 208 h100" stroke="#e8584f" stroke-width="2"/>`:'');
+  if(RR.poster){ const P={mountains:`<path d="M-18 10 l12 -16 l8 10 l6 -6 l10 12 z" fill="#7bbf8a"/><circle cx="10" cy="-8" r="4" fill="#f2c14e"/>`,cat:`<circle r="9" fill="#f2a65a"/><path d="M-8 -5 l3 -9 l5 6 M8 -5 l-3 -9 l-5 6" fill="#f2a65a"/><circle cx="-3" cy="-1" r="1.3" fill="${OUT}"/><circle cx="3" cy="-1" r="1.3" fill="${OUT}"/>`,barbell:`<rect x="-16" y="-1.5" width="32" height="3" fill="#555"/><rect x="-18" y="-9" width="5" height="18" fill="#c43c35"/><rect x="13" y="-9" width="5" height="18" fill="#c43c35"/>`,heart:`<path d="M0 8 l-10 -10 a5 5 0 0 1 10 -6 a5 5 0 0 1 10 6 z" fill="#e8584f"/>`}[RR.poster];
+    s+=`<g transform="translate(250 70)"><rect x="-24" y="-20" width="48" height="40" fill="#fffaf0" stroke="${OUT}" stroke-width="2.5"/>${P}</g>`; }
+  if(RR.plant){ const P={monstera:`<rect x="-10" y="-18" width="20" height="18" fill="#c96a5e" stroke="${OUT}" stroke-width="2"/><path d="M0 -18 q-20 -20 -6 -40 q4 18 6 40 q4 -26 18 -34 q0 22 -18 34" fill="#4c9a5a" stroke="${OUT}" stroke-width="2"/>`,cactus:`<rect x="-9" y="-14" width="18" height="14" fill="#e3b26a" stroke="${OUT}" stroke-width="2"/><rect x="-5" y="-40" width="10" height="26" rx="5" fill="#5ea65a" stroke="${OUT}" stroke-width="2"/><path d="M-5 -26 h-6 v-8" fill="none" stroke="${OUT}" stroke-width="2"/>`,flowers:`<rect x="-9" y="-16" width="18" height="16" fill="#8fb6e8" stroke="${OUT}" stroke-width="2"/>${[-8,0,8].map((x,i)=>`<path d="M${x/2} -16 L${x} -32" stroke="#4c9a5a" stroke-width="2"/><circle cx="${x}" cy="-34" r="5" fill="${['#f29ac8','#f2c14e','#e8584f'][i]}" stroke="${OUT}" stroke-width="1.5"/>`).join('')}`}[RR.plant];
+    s+=`<g transform="translate(700 196)">${P}</g>`; }
   [342,620].forEach((wx,i)=>{ s+=`<g stroke="${OUT}" stroke-width="2.5"><rect x="${wx}" y="24" width="64" height="54" rx="4" fill="${p.asleep?'#33427a':'#bfe3ff'}"/><path d="M${wx+32} 24 v54 M${wx} 51 h64" fill="none"/></g>`;
     if(i===0){ if(p.asleep) s+=`<circle cx="${wx+18}" cy="40" r="7" fill="#fff6c8"/><circle cx="${wx+22}" cy="37" r="6" fill="#33427a"/>`; else s+=`<circle cx="${wx+50}" cy="38" r="6" fill="#ffd25e"/>`; } });
   const hwNow=hwOn(Date.now());
@@ -1459,7 +1613,20 @@ function wearOn(look,slot,key){ const L=Object.assign({},look||{}); L[slot]=key;
   if(slot==='pjt_suit'){ delete L.top; delete L.bottom; } if(slot==='pjt_shoes') delete L.shoes;
   if((slot==='top'||slot==='bottom')&&key!=='default') delete L.pjt_suit; if(slot==='shoes'&&key!=='default') delete L.pjt_shoes;
   return L; }
-const setItems=(p,tab)=>tab==='hw'?hwItems(p):tab==='pjt'?pjtItems(p):[];
+const ROOM_ITEMS=[
+  ['wall','mint','Стены: мятные',8,'#dff3e6'],['wall','sky','Стены: небесные',8,'#dcebfa'],['wall','peach','Стены: персиковые',8,'#ffe3d1'],['wall','lilac','Стены: сиреневые',8,'#ece3fb'],
+  ['wall','lemon','Стены: лимонные',8,'#fff5c9'],['wall','grey','Стены: серые',8,'#e4e7ec'],['wall','rose','Стены: розовые',8,'#fbe1ea'],['wall','dark','Стены: тёмные',8,'#4a5068'],
+  ['floor','oak','Пол: дубовый',8,'#c9a06a'],['floor','walnut','Пол: тёмный орех',8,'#7a5a3a'],['floor','tile','Пол: плитка',8,'#e8e2d4'],['floor','bluecarpet','Пол: синий ковролин',8,'#8fb0d8'],['floor','grass','Пол: травяной',8,'#a8c98a'],['floor','concrete','Пол: бетон',8,'#9aa0a6'],
+  ['curtain','blue','Шторы: синие',5,'#6b9be0'],['curtain','green','Шторы: зелёные',5,'#7bbf8a'],['curtain','yellow','Шторы: жёлтые',5,'#f2c94c'],['curtain','purple','Шторы: фиолетовые',5,'#a993dd'],['curtain','pink','Шторы: розовые',5,'#f29ac8'],
+  ['furn','white','Мебель: белая',6,'#f1ece2'],['furn','black','Мебель: чёрная',6,'#3a3f4a'],['furn','blue','Мебель: голубая',6,'#8fb6e8'],['furn','pink','Мебель: розовая',6,'#f2b6cf'],['furn','mint','Мебель: мятная',6,'#9fd8c0'],
+  ['linen','pink','Бельё: розовое',5,'#f6b6cf'],['linen','green','Бельё: зелёное',5,'#9fd8a8'],['linen','yellow','Бельё: жёлтое',5,'#f6dc8a'],['linen','purple','Бельё: фиолетовое',5,'#c6b6ee'],['linen','stars','Бельё: звёздное',6,'#33427a'],
+  ['rug','red','Ковёр: красный',6,'#d6604f'],['rug','blue','Ковёр: синий',6,'#5b7fd4'],['rug','stripes','Ковёр: полосатый',6,'#f2c14e'],
+  ['plant','monstera','Растение: монстера',4,''],['plant','cactus','Растение: кактус',4,''],['plant','flowers','Растение: цветы',4,''],
+  ['poster','mountains','Картина: горы',6,''],['poster','cat','Картина: котик',6,''],['poster','barbell','Постер: штанга',6,''],['poster','heart','Картина: сердце',6,'']];
+const roomCol=(slot,R)=>{ const it=ROOM_ITEMS.find(x=>x[0]===slot&&x[1]===(R||{})[slot]); return it?it[4]:null; };
+let roomPreview=null;
+const roomOf=()=>roomPreview||S.room||{};
+const setItems=(p,tab)=>tab==='hw'?hwItems(p):tab==='pjt'?pjtItems(p):tab==='room'?ROOM_ITEMS:[];
 function hwItems(p){ const h=CH[p.type].human; return HW_ITEMS.filter(([sl,k])=>!(p.type==='cat'&&k==='catears')).map(([sl,k,n,pr])=>[sl==='top'&&!h?'coat':sl,k,n,pr]).filter(([sl,k])=>hwOn(Date.now())||owns(sl,k)); }
 const HUNT_PLACE={curtain:'за шторой',table:'возле стола',dresser:'возле комода',wardrobe:'возле шкафа',bed:'под кроватью'};
 const HUNT_X={curtain:[448,190],table:[586,192],dresser:[641,192],wardrobe:[199,192],bed:[868,192]};
@@ -1512,7 +1679,11 @@ function relStep(p,t){
     if(r.love<=0&&(romance(r)||r.mate)){ r.left=true; r.leftAt=t; if(r.soul){ p.soulCooldown=4; p.lostSouls=(p.lostSouls||[]).concat([{name:r.name,breed:r.breed}]).slice(-3); } if(!p.outside){ p.msg=r.name+(r.fem?' ушла. Сказала':' ушёл. Сказал')+', что '+(isF(p)?'она ':'он ')+(r.fem?'её':'его')+' совсем не замечает.'; p.msgRaw=true; } }
   });
 }
-let knocks=[];
+let knocks=[]; const furnOpen={};
+function wardrobeInside(w2){ const L=(S.owned||[]).filter(x=>/^(top|coat|hw|pjt_suit|hat):/.test(x)).slice(0,5); const cols=['#e8584f','#5b7fd4','#f2c14e','#7bbf8a','#a993dd'];
+  let s=`<rect x="424" y="74" width="64" height="116" fill="#6b4a2a" stroke="${OUT}" stroke-width="2"/><path d="M428 86 h56" stroke="#c9cfd6" stroke-width="3"/>`;
+  (L.length?L:['','']).forEach((x,i)=>{ const cx=436+i*12; s+=`<path d="M${cx} 86 v6" stroke="#c9cfd6" stroke-width="1.5"/><path d="M${cx-6} 92 h12 l3 34 h-18 z" fill="${x?cols[i%5]:'#8a6a4a'}" stroke="${OUT}" stroke-width="1.5"/>`; });
+  return s+`<rect x="404" y="70" width="18" height="124" fill="${w2}" stroke="${OUT}" stroke-width="2"/><rect x="490" y="70" width="18" height="124" fill="${w2}" stroke="${OUT}" stroke-width="2"/>`; }
 function knock(p){
   const now=Date.now(); if(knocks.length&&now-knocks[knocks.length-1]>400) knocks=[]; knocks.push(now);
   if(knocks.length>=4){ knocks=[]; goOut(p,true); return true; }
@@ -1610,6 +1781,8 @@ function npcSVG(r,happy){
 const ST_SPOTS={st_tree:{x:400,name:'за деревом',obj:'tree'},st_pond:{x:606,name:'в камышах',obj:'pond'},st_kiosk:{x:772,name:'за киоском',obj:'shop'},st_bench:{x:175,name:'под лавочкой',obj:'bench'}};
 const ST_X={tree:404,pond:520,bench:176,swing:925,shop:715,scales:872,pjt:820};
 const ST_ACT={
+  strongman:{tree:'Перевернул покрышку от трактора у дерева 🛞',pond:'Вытолкал застрявшую в луже машину 🚗',bench:'Помог соседям занести диван на пятый этаж 🛋️',swing:'Донёс бабушке канистры с водой — прогулка фермера 💧'},
+  thai:{tree:'Набивает голени о дерево. Дерево держится',pond:'Бой с тенью у пруда 🥊',bench:'Прыгает через скакалку у лавочки',swing:'Растяжка и высокий кик'},
   cat:{tree:'Залез на дерево и гордо смотрит сверху 🌳',pond:'Смотрит на уток. Утки смотрят на него. Напряжённо.',bench:'Сидит на спинке лавочки и умывается',swing:'Поймал бабочку! И отпустил. Почти.'},
   dog:{tree:'Роет яму под деревом. Что-то нашёл!',pond:'Плюх! Плавает в пруду и счастлив 💦',bench:'Гоняет голубей у лавочки',swing:'Носится вокруг качелей'},
   hamster:{tree:'Прячет семечку под корнями',pond:'Осторожно нюхает воду',bench:'Бегает в траве у лавочки',swing:'Катается на качелях, держится щёчками'},
@@ -1712,7 +1885,7 @@ function streetSVG(p,m,fat){
 
 /* ================= отрисовка ================= */
 const $=id=>document.getElementById(id);
-let chosen='trainer', chosenSex='m', frame=0, walkX=480, walkDir=1;
+let chosenLook='hair', chosen='trainer', chosenSex='m', frame=0, walkX=480, walkDir=1;
 function moodOf(p){
   const s=p.stats; if(p.asleep||p.dormant) return 'sleep';
   if(p.reactUntil&&Date.now()<p.reactUntil&&!p.sick) return 'happy';
@@ -1754,7 +1927,7 @@ function drawPet(move){
   const p=S.pet; if(!p) return;
   const m=moodOf(p), fat=fatLevel(p), evo=p.evolvedAt&&Date.now()-p.evolvedAt<5000;
   if(move) tickWalk(p,m);
-  const key=[p.type,p.breed,JSON.stringify(p.look||{}),p.sex,p.stage,p.form,p.teenForm,m,fat,p.poop,(p.messX||[]).join(','),p.hidden,p.asleep,p.light,!!p.call,evo,hwOn(Date.now())&&S.hunt?S.hunt.day+S.hunt.found.join(','):''].join('|');
+  const key=[p.type,p.breed,JSON.stringify(p.look||{}),p.sex,p.stage,p.form,p.teenForm,m,fat,p.poop,(p.messX||[]).join(','),p.hidden,p.asleep,p.light,!!p.call,evo,hwOn(Date.now())&&S.hunt?S.hunt.day+S.hunt.found.join(','):'',JSON.stringify(S.room||{}),S.bedMessy,S.curtOpen,Object.values(furnOpen).filter(x=>x>Date.now()).length].join('|');
   const el=$('scene');
   if(camX===null||camX<camMin(p)||camX>camMax(p)) camX=Math.max(camMin(p),Math.min(camMax(p),p.stage==='baby'?320:walkX-VIEW/2));
   if(p.outside){ const r=rel(p), t=Date.now(), F=streetFinds(p), E=encounter(p); const k2='out|'+key+'|'+r.kind+r.name+r.left+r.wants+(r.flowersUntil>t)+(t<(p.reactUntil||0))+(r.love>=60)+(r.task?r.task.type:'')+r.couple+'|'+new Date(t).getHours()+isRain(t)+'|'+F.list.map(f=>f.got).join()+'|'+(E?E.kind+E.x:'')+'|'+(p.stX||206)+'|'+p.hidden; if(k2!==sceneKey){ el.innerHTML=streetSVG(p,m,fat); sceneKey=k2; applyCam(); } return; }
@@ -1871,13 +2044,17 @@ function render(){
     }
     else if(view==='style'){
       let pr=priceOf(styleTab,styleSel), cur=(p.look||{})[styleTab]||'default', same=styleSel===cur, lab=pr+' '+coinWord(pr);
-      if(styleTab!=='hw'&&styleTab!=='pjt'&&(styleSel==='default'||owns(styleTab,styleSel))) lab='бесплатно, уже твоё';
+      if(styleTab!=='hw'&&styleTab!=='pjt'&&styleTab!=='room'&&(styleSel==='default'||owns(styleTab,styleSel))) lab='бесплатно, уже твоё';
+      if(styleTab==='room'&&styleSel){ const [a,b]=styleSel.split(':'); if(a==='reset'){ same=!Object.keys(S.room||{}).length; lab='бесплатно'; } else { const it=ROOM_ITEMS.find(x=>x[0]===a&&x[1]===b); same=(S.room||{})[a]===b; pr=it?it[3]:0; lab=owns('room_'+a,b)?'бесплатно, уже твоё':pr+' '+coinWord(pr); } }
       if(styleTab==='pjt'&&styleSel){ const [a,b]=styleSel.split(':'); if(a==='none'){ same=!Object.keys(p.look||{}).some(k=>k.startsWith('pjt_')); lab='бесплатно'; } else { const it=pjtItems(p).find(x=>x[0]===a&&x[1]===b); same=(p.look||{})[a]===b; pr=it?it[3]:0; lab=owns(a,b)?'бесплатно, уже твоё':pr+' '+coinWord(pr); } }
       if(styleTab==='hw'&&styleSel){ const [a,b]=styleSel.split(':'), it=hwItems(p).find(x=>x[0]===a&&x[1]===b); same=(p.look||{})[a]===b; pr=it?it[3]:0; lab=owns(a,b)?'бесплатно, уже твоё':(S.pumpkins||0)>=pr?pr+' 🎃':pr*2+' монет (тыкв мало)'; }
-      html=`<button class="btn" data-a="applyStyle" style="grid-column:span 2" ${same?'disabled':''}>${styleTab==='pjt'&&styleSel==='none:none'?'Снять':styleTab==='hw'||styleTab==='pjt'?(styleSel&&!same&&!owns(...styleSel.split(':'))?'Купить':'Надеть'):(styleSel==='default'||owns(styleTab,styleSel)?'Надеть':'Купить')}<small>${same?'уже надето':lab}</small></button><button class="btn" data-a="back">Назад</button>`;
+      html=`<button class="btn" data-a="applyStyle" style="grid-column:span 2" ${same?'disabled':''}>${styleTab==='room'?(styleSel==='reset:all'?'Вернуть':!same&&!owns('room_'+styleSel.split(':')[0],styleSel.split(':')[1])?'Купить':'Поставить'):styleTab==='pjt'&&styleSel==='none:none'?'Снять':styleTab==='hw'||styleTab==='pjt'?(styleSel&&!same&&!owns(...styleSel.split(':'))?'Купить':'Надеть'):(styleSel==='default'||owns(styleTab,styleSel)?'Надеть':'Купить')}<small>${same?'уже надето':lab}</small></button><button class="btn" data-a="back">Назад</button>`;
     }
     else if(view==='tot'){
       html=`<button class="btn" data-a="totYes" style="grid-column:span 2">Дать конфеты 🍬<small>сладость</small></button><button class="btn" data-a="totNo">Не открывать<small>гадость</small></button>`;
+    }
+    else if(view==='games'){
+      html=`<button class="btn" data-a="g_own">${c.game}<small>своя игра</small></button><button class="btn" data-a="g_catch">Поймай<small>${CATCH[p.type].good} ловить</small></button><button class="btn" data-a="g_pairs">Найди пару<small>карточки</small></button><button class="btn" data-a="g_ttt">Крестики-нолики<small>против ${isF(p)?'неё':'него'}</small></button><button class="btn" data-a="back" style="grid-column:span 2">Назад</button>`;
     }
     else if(view==='food'){
       const f=foods(p);
@@ -1913,10 +2090,12 @@ function render(){
     const box=$('picks');
     if(!box.dataset.built){
       box.dataset.built='1';
-      document.querySelectorAll('.sexbtn').forEach(b=>b.onclick=()=>{chosenSex=b.dataset.sex;box.dataset.sex='';render();});
+      document.querySelectorAll('.sexbtn:not(.lookbtn)').forEach(b=>b.onclick=()=>{chosenSex=b.dataset.sex;box.dataset.sex='';render();});
+      document.querySelectorAll('.lookbtn').forEach(b=>b.onclick=()=>{chosenLook=b.dataset.look;render();});
     }
     if(box.dataset.sex!==chosenSex){ box.innerHTML=''; ORDER.forEach(k=>{const b=document.createElement('button');b.className='pick';b.dataset.k=k;b.insertAdjacentHTML('beforeend',previewSVG(k,chosenSex));const t=document.createElement('b');t.textContent=titleOf(k,chosenSex);b.appendChild(t);b.onclick=()=>{chosen=k;render();};box.appendChild(b);}); box.dataset.sex=chosenSex; }
-    document.querySelectorAll('.sexbtn').forEach(b=>{ b.textContent=chosen==='cat'?(b.dataset.sex==='m'?'Кот':'Кошка'):chosen==='dog'?(b.dataset.sex==='m'?'Пёс':'Собака'):chosen==='hamster'?(b.dataset.sex==='m'?'Хомяк':'Хомячиха'):(b.dataset.sex==='m'?'Он':'Она'); b.setAttribute('aria-pressed',b.dataset.sex===chosenSex); });
+    $('lookRow').hidden=!(CH[chosen].human&&chosen!=='alpha'&&chosenSex==='m'); document.querySelectorAll('.lookbtn').forEach(b=>b.setAttribute('aria-pressed',b.dataset.look===chosenLook));
+    document.querySelectorAll('.sexbtn:not(.lookbtn)').forEach(b=>{ b.textContent=chosen==='cat'?(b.dataset.sex==='m'?'Кот':'Кошка'):chosen==='dog'?(b.dataset.sex==='m'?'Пёс':'Собака'):chosen==='hamster'?(b.dataset.sex==='m'?'Хомяк':'Хомячиха'):(b.dataset.sex==='m'?'Он':'Она'); b.setAttribute('aria-pressed',b.dataset.sex===chosenSex); });
     $('nameLbl').textContent=chosenSex==='f'?'Как её зовут?':'Как его зовут?';
     $('petName').placeholder=chosenSex==='f'?'Например, Галя':'Например, Гена';
     box.querySelectorAll('.pick').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===chosen));
@@ -1938,6 +2117,7 @@ $('startBtn').onclick=()=>{
     stats:{hunger:50,happy:50,disc:0,health:100},extra:0,wv:3,poop:0,sick:false,doses:0,light:true,asleep:false,
     sleptAt:0,lightPenalized:false,call:null,nextPoop:now+6*MIN,nextCall:now+4*MIN,mistakes:0,z_hunger:null,z_happy:null,
     msg:chosenSex==='f'?'Привет! Я маленькая и голодная. Покорми меня.':'Привет! Я маленький и голодный. Покорми меня.'};
+  if(chosenLook==='bald'&&CH[chosen].human&&chosen!=='alpha'&&chosenSex==='m'){ S.pet.look={hair:'bald',beard:'full'}; S.owned=(S.owned||[]).concat(['hair:bald','beard:full'].filter(x=>!(S.owned||[]).includes(x))); }
   if(S.pet.breed) S.pet.msg=(chosen==='dog'?'Тебе достался щенок: ':chosen==='hamster'?'Тебе достался хомячонок: ':'Тебе достался котёнок: ')+breedOf(chosen,S.pet.breed).name+'. '+S.pet.msg;
   $('petName').value=''; view='main';
   save(); render();
