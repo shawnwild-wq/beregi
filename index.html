@@ -41,6 +41,7 @@ body{background:radial-gradient(120% 80% at 50% 0%,var(--page),var(--page-2));co
 .bar{height:6px;border-radius:3px;background:var(--lcd-shade);overflow:hidden;flex-basis:100%}
 .bar span{display:block;height:100%;background:#f0b429}
 .snd+.snd{margin-left:6px}
+.cfm{position:fixed;inset:0;background:rgba(20,26,40,.6);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}.cfmbox{background:#fffaf0;border:2.5px solid #2a2a2a;border-radius:14px;padding:16px;max-width:340px;font:15px/1.4 Rubik,system-ui,sans-serif;white-space:pre-line}.cfmbox div{display:flex;gap:8px;margin-top:12px}.cfmbox button{flex:1;font:700 14px Rubik,system-ui,sans-serif;border:0;border-radius:10px;padding:11px}.cfmbox .ok{background:#2a2a2a;color:#fff}.cfmbox .no{background:#e3ddd0}
 .hwb{border-color:#e8822a;color:#7a3c00;background:#ffe2c4;font-weight:700;cursor:default}
 .hwglow{animation:hwg 1.6s ease-in-out infinite}
 .rain{animation:rainf .5s linear infinite}@keyframes rainf{from{transform:translate(0,0)}to{transform:translate(-4px,10px)}}@keyframes hwg{0%,100%{opacity:.25}50%{opacity:.85}}
@@ -623,7 +624,7 @@ function renderStyle(p){
   const SET=styleTab==='hw'||styleTab==='pjt', HW=styleTab==='hw', PJ=styleTab==='pjt';
   if(styleSel==null) styleSel=SET?(styleOpts(p,styleTab)[0]||[''])[0]:(p.look||{})[styleTab]||'default';
   const hsl=SET?styleSel.split(':'):null;
-  let look=SET?Object.assign({},p.look||{},{[hsl[0]]:hsl[1]}):Object.assign({},p.look||{},{[styleTab]:styleSel});
+  let look=SET?(hsl[0]==='none'?Object.assign({},p.look||{}):wearOn(p.look,hsl[0],hsl[1])):wearOn(p.look,styleTab,styleSel);
   if(PJ&&styleSel==='none:none'){ look=Object.assign({},p.look||{}); Object.keys(look).forEach(k=>{ if(k.startsWith('pjt_')) delete look[k]; }); }
   const vb=CH[p.type].human?'-85 -178 170 184':'-80 -150 175 156';
   const m=p.sick?'sick':'happy';
@@ -642,16 +643,16 @@ function act(a){
   if(a==='applyStyle'&&styleTab==='hw'){ const [sl,k]=styleSel.split(':'), it=hwItems(p).find(x=>x[0]===sl&&x[1]===k); if(!it) return;
     const pr=it[3]; if(!owns(sl,k)){ if((S.pumpkins||0)>=pr) S.pumpkins-=pr; else if((S.coins||0)>=pr*2) S.coins-=pr*2; else { styleNote='Не хватает: нужно '+pr+' 🎃 (у тебя '+(S.pumpkins||0)+') или '+pr*2+' монет.'; sfx('no'); render(); return; }
       S.owned=(S.owned||[]).concat([sl+':'+k]); styleNote='Куплено: '+it[2]+'! Теперь это твоё навсегда.'; } else styleNote='Надето!';
-    p.look=Object.assign({},p.look||{},{[sl]:k}); p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; save(); render(); return; }
+    p.look=wearOn(p.look,sl,k); p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; save(); render(); return; }
   if(a==='applyStyle'&&styleTab==='pjt'){ const [sl,k]=styleSel.split(':');
     if(sl==='none'){ const L=Object.assign({},p.look||{}); Object.keys(L).forEach(x=>{ if(x.startsWith('pjt_')) delete L[x]; }); p.look=L; styleNote='Экипировка снята.'; save(); render(); return; }
     const it=pjtItems(p).find(x=>x[0]===sl&&x[1]===k); if(!it) return; const pr=it[3];
     if(!owns(sl,k)){ if((S.coins||0)<pr){ styleNote='Не хватает монет: нужно '+pr+', у тебя '+(S.coins||0)+'.'; sfx('no'); render(); return; } S.coins-=pr; S.owned=(S.owned||[]).concat([sl+':'+k]); styleNote='Куплено: '+it[2]+'! Теперь это твоё навсегда.'; } else styleNote='Надето!';
-    p.look=Object.assign({},p.look||{},{[sl]:k}); p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; save(); render(); return; }
+    p.look=wearOn(p.look,sl,k); p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; save(); render(); return; }
   if(a==='applyStyle'){ const pr=priceOf(styleTab,styleSel), free=styleSel==='default'||owns(styleTab,styleSel);
     if(!free&&(S.coins||0)<pr){ styleNote='Не хватает монет: нужно '+pr+', у тебя '+(S.coins||0)+'.'; sfx('no'); render(); return; }
     if(!free){ S.coins-=pr; S.owned=(S.owned||[]).concat([styleTab+':'+styleSel]); }
-    p.look=Object.assign({},p.look||{},{[styleTab]:styleSel}); styleNote=free?'Надето! Это уже твоё, бесплатно.':'Куплено навсегда! Списано '+pr+' '+coinWord(pr)+'. Теперь переодевать бесплатно.'; p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; save(); render(); return; }
+    p.look=wearOn(p.look,styleTab,styleSel); styleNote=free?'Надето! Это уже твоё, бесплатно.':'Куплено навсегда! Списано '+pr+' '+coinWord(pr)+'. Теперь переодевать бесплатно.'; p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; save(); render(); return; }
   if(p.dormant&&a!=='status'&&a!=='back'){ if(a==='food'||a==='meal'){ p.dormant=false; p.stats.health=60; p.stats.hunger=60; p.stats.happy=40; p.lastTick=Date.now(); p.msg='Проснулся! Он так ждал тебя 🥺'; p.pop=(p.pop||0)+1; p.reactUntil=Date.now()+2500; sfx('happy'); view='main'; }
     else { p.msg='Он спит и ждёт тебя. Покорми его, чтобы разбудить.'; sfx('no'); } save(); render(); return; }
   if(a==='bed'){ if((S.beds||0)>0){ S.beds--; p.onBed=true; walkX=872; panTo(872-VIEW/2); p.msg='Уложил на кровать. Утром у него будет отличное настроение ☀️ Осталось ночей: '+S.beds+'.'; sfx('happy'); save(); render(); }
@@ -1454,6 +1455,10 @@ const PJT_ITEMS=[['pjt_suit','red','Трико ПЖТ красное',15],['pjt_
   ['pjt_wrist','wraps','Кистевики',5],['pjt_elbow','sleeves','Налокотники',6],['pjt_shoes','squat','Штангетки',12],['pjt_shoes','dead','Тяговые тапки',10]];
 const PJT_COL={red:'#c43c35',blue:'#2f5fb0',black:'#1e1e24',burgundy:'#7a1f2b',pink:'#e86aa0'};
 function pjtItems(p){ return p.type==='lifter'?PJT_ITEMS.filter(x=>x[1]!=='pink'||isF(p)):[]; }
+function wearOn(look,slot,key){ const L=Object.assign({},look||{}); L[slot]=key;
+  if(slot==='pjt_suit'){ delete L.top; delete L.bottom; } if(slot==='pjt_shoes') delete L.shoes;
+  if((slot==='top'||slot==='bottom')&&key!=='default') delete L.pjt_suit; if(slot==='shoes'&&key!=='default') delete L.pjt_shoes;
+  return L; }
 const setItems=(p,tab)=>tab==='hw'?hwItems(p):tab==='pjt'?pjtItems(p):[];
 function hwItems(p){ const h=CH[p.type].human; return HW_ITEMS.filter(([sl,k])=>!(p.type==='cat'&&k==='catears')).map(([sl,k,n,pr])=>[sl==='top'&&!h?'coat':sl,k,n,pr]).filter(([sl,k])=>hwOn(Date.now())||owns(sl,k)); }
 const HUNT_PLACE={curtain:'за шторой',table:'возле стола',dresser:'возле комода',wardrobe:'возле шкафа',bed:'под кроватью'};
@@ -1768,13 +1773,18 @@ function renderStatus(p){
     ['Дисциплина',Math.round(s.disc)+'%']].concat(p.revives?[['Жизнь','вторая попытка ('+p.revives+')']]:[]).concat((S.beds||0)>0?[['Ночей на кровати',S.beds]]:[])).concat(p.type==='lifter'?[['Весовая категория','до '+(isF(p)?CH.lifter.catF:CH.lifter.cat)+' кг'],['Медали',p.medals||0],['Соревнования',p.meetOpen?'сегодня! выходи на помост':p.meetAt&&p.stage!=='baby'?'через '+dur(Math.max(0,p.meetAt-Date.now())):'после взросления'],['Сегодня в зале',p.stage!=='baby'?(()=>{const P=todayProgram(p);return LIFTS[P[0]].toLowerCase()+' '+P[1];})():'—']]:[]).concat([
   ]).map(([a,b])=>`<div class="row"><span>${a}</span><span>${b}</span></div>`).join('')+
     `<div class="hint2">♥♥♥♥ — всё отлично, ♡♡♡♡ — срочно позаботься. Одна еда или игра даёт одно сердечко.</div>`+
-    (p.eternal?`<div class="evo"><b>♾ Вечный</b><span>Он не умрёт. Если о нём забыть, уснёт и будет ждать тебя. Можно отправить его в Зал славы и завести второго питомца — обычного.</span><button id="hallBtn" type="button">${eternalConfirm?'Точно? Нажми ещё раз':'🏛 Отправить в Зал славы'}</button></div>`
-     :!S.eternalUsed&&!S.hall?`<div class="evo"><b>♾ Вечный питомец</b><span>Сделай ${esc(p.name)} вечным: он больше не умрёт — если о нём забыть, он уснёт и будет ждать тебя. Потом его можно отправить в Зал славы и завести второго. Только один раз за всю игру и только пока он жив.</span><button id="eternalBtn" type="button">${eternalConfirm?'Точно его? Нажми ещё раз':'Сделать вечным · '+PAY.eternal+' ⭐'}</button></div>`:'');
+    (p.eternal?`<div class="evo"><b>♾ Вечный</b><span>Он не умрёт. Если о нём забыть, уснёт и будет ждать тебя. Можно отправить его в Зал славы и завести второго питомца — обычного.</span><button id="hallBtn" type="button">🏛 Отправить в Зал славы</button></div>`
+     :!S.eternalUsed&&!S.hall?`<div class="evo"><b>♾ Вечный питомец</b><span>Сделай ${esc(p.name)} вечным: он больше не умрёт — если о нём забыть, он уснёт и будет ждать тебя. Потом его можно отправить в Зал славы и завести второго. <b>Только один-единственный раз за всю игру</b> — для одного питомца и только пока он жив.</span><button id="eternalBtn" type="button">Сделать вечным · ${PAY.eternal} ⭐</button></div>`:'');
   const eb=$('eternalBtn'), hb=$('hallBtn');
-  if(eb) eb.onclick=()=>{ if(!eternalConfirm){ eternalConfirm=true; renderStatus(p); return; } eternalConfirm=false; act('eternal'); };
-  if(hb) hb.onclick=()=>{ if(!eternalConfirm){ eternalConfirm=true; renderStatus(p); return; } eternalConfirm=false; act('hall'); };
+  if(eb) eb.onclick=()=>askConfirm('Сделать '+p.name+' вечным за '+PAY.eternal+' ⭐?\n\nЭто можно сделать только один раз за всю игру — потом ни для одного другого питомца купить уже не получится.','Да, сделать вечным',()=>act('eternal'));
+  if(hb) hb.onclick=()=>askConfirm('Отправить '+p.name+' в Зал славы? Дома станет пусто, и ты сможешь завести нового питомца. Забрать '+p.name+' обратно можно, когда дома никого не будет.','Отправить',()=>act('hall'));
 }
 let eternalConfirm=false;
+function askConfirm(text,ok,cb){ const T=window.Telegram&&Telegram.WebApp;
+  if(T&&T.showConfirm&&tgInit()){ try{ T.showConfirm(text.replace(/\n\n/g,' '),r=>{ if(r) cb(); }); return; }catch(e){} }
+  const d=document.createElement('div'); d.className='cfm'; d.innerHTML=`<div class="cfmbox"><p></p><div><button type="button" class="ok"></button><button type="button" class="no">Отмена</button></div></div>`;
+  d.querySelector('p').textContent=text; d.querySelector('.ok').textContent=ok; document.body.appendChild(d);
+  d.querySelector('.ok').onclick=()=>{ d.remove(); cb(); }; d.querySelector('.no').onclick=()=>d.remove(); }
 let lastPop=null, lastNeeds=0, actx=null;
 function unlockAudio(){ try{ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); }catch(e){} }
 const SFX={click:[[880,.05]],eat:[[392,.08],[0,.06],[392,.08],[0,.06],[392,.08]],happy:[[659,.1],[784,.1],[1047,.18]],
